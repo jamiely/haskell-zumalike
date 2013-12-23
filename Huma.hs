@@ -139,13 +139,16 @@ addBallToGameInWay (Game gen transits) ball way = Game gen newTransits where
                                then (addBallToTransit ball t)
                                else t 
 
-addBallToGameInTransit :: Game -> Transit -> Ball -> Game
-addBallToGameInTransit (Game gen transits) transit ball = Game gen newTransits where
-  newTransits = map update transits
+addBallToGameInTransit :: Game -> Transit -> Ball -> (Game, Maybe Transit)
+addBallToGameInTransit (Game gen transits) transit ball = (game, maybeNewTransit) where
+  game = Game gen newTransits 
+  newTransitPairs = map update transits
+  newTransits = map fst newTransitPairs 
+  maybeNewTransit = liftM fst $ find snd newTransitPairs 
   -- updates the transit if it matches the `way` we are looking for
   update t = if transit == t
-               then (addBallToTransit ball t)
-               else t 
+               then (addBallToTransit ball t, True)
+               else (t, False) 
 
 -- Setup some fake data to render
 
@@ -163,9 +166,12 @@ fakeGame :: Game
 fakeGame = game where
   transit = fakeTransit
   b = addTransitToGame emptyGame transit 
-  addBall ball game = addBallToGameInTransit game transit ball
-  c = updateGamePositions $ foldr addBall b fakeBalls
-  game = c
+  addBall ball (game, mt) = case mt of
+                             Just t -> addBallToGameInTransit game t ball
+                             Nothing -> (game, mt)
+  (c, _) = foldr addBall (b, Just transit) fakeBalls
+  d = updateGamePositions c
+  game = d
 
 
 
