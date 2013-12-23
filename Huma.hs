@@ -43,6 +43,11 @@ updateTransitPositions (Transit c@(Chain balls) way originalPositions) =
   Transit c way newPositions where
   ballPairs = ballAndPreviousBall balls
   newPositions = foldr fun originalPositions ballPairs
+  {-newPositions = funNewPositions ballPairs originalPositions -}
+  {-funNewPositions (pair:pairs) pos = funNewPositions pairs updatedPos where-}
+    {-updatedPos = updatePositionsUsingPrev way pair pos-}
+  {-funNewPositions [] pos = pos-}
+
   fun = updatePositionsUsingPrev way
 
 updateGamePositions :: Game -> Game
@@ -71,7 +76,8 @@ updatePositionsUsingPrev way (ball, Just previous) originalPositions =
 updatePositionsUsingPrev _ (_, Nothing) ps = ps
 
 updatePosition :: Position -> Positions -> Positions
-updatePosition (Position ball point) (PositionMap map) = PositionMap $ Map.insert ball point map 
+updatePosition (Position ball point) (PositionMap map) = 
+  PositionMap $ Map.insert ball point map 
 
 getPosition :: Positions -> Ball -> Maybe Position
 getPosition (PositionMap map) ball = maybePos where 
@@ -99,7 +105,7 @@ nonCollidingPositionAlongPoints points noCollide@(Position _ nPt) (Position pBal
   liftM (Position pBall) $ find pred possiblePts where
     possiblePts = case dropWhile (/= nPt) points of
                     [] -> []
-                    ls -> tail ls
+                    l:ls -> ls
     pred pt = not $ isColliding noCollide (Position pBall pt)
 
 newBallFromGenerator :: BallGenerator -> (Ball, BallGenerator)
