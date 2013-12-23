@@ -6,10 +6,10 @@ import Data.Generics.Aliases(orElse)
 import Control.Monad
 import System.Random (StdGen)
 
-type Width = Int
+type Width = Double
 type BallId = Int
 
-data Point = Point Int Int deriving (Eq)
+data Point = Point Double Double deriving (Eq)
 -- a regular ball in Zuma
 data Ball = Ball BallId Width deriving (Eq, Ord)
 -- a contiguous segment which a ball may traverse
@@ -24,6 +24,10 @@ data Transit = Transit Chain Way Positions
 data BallGenerator = SequentialGenerator Int
 data Game = Game BallGenerator [Transit]
 data Position = Position Ball Point
+
+euclideanDistance :: Point -> Point -> Double
+euclideanDistance (Point x1 y1) (Point x2 y2) = 
+  sqrt $ (x1 - x2)**2 + (y1 - y2)**2
 
 -- Returns the first way point availble on the way
 firstWayPoint :: Way -> Maybe Point
@@ -79,7 +83,9 @@ getPosition (PositionMap map) ball = maybePos where
   maybePt = Map.lookup ball map
 
 isColliding :: Position -> Position -> Bool
-isColliding _ _ = False -- TODO
+isColliding (Position (Ball _ w1) pt1) (Position (Ball _ w2) pt2) =
+  (euclideanDistance pt1 pt2) < (w1 + w2)
+
 
 -- Returns a new ball position updated along the way so it is not colliding
 -- with the first ball position.
