@@ -19,6 +19,6 @@ executable haskell-zumalike
   main-is:             Main.hs
   other-modules:       Huma
   -- other-extensions:    
-  build-depends:       base >=4.6 && <4.7, containers
+  build-depends:       base >=4.6 && <4.7, containers, syb, random
   -- hs-source-dirs:      
   default-language:    Haskell2010
