@@ -5,6 +5,7 @@ import qualified Data.Map as Map
 import Data.Generics.Aliases(orElse)
 import Control.Monad
 import System.Random (StdGen)
+import Data.List (find)
 
 type Width = Double
 type BallId = Int
@@ -69,7 +70,7 @@ updatePositionitionUsingPrev way (ball, Just previous) originalPositions =
         prevPos <- lookup previous
         ballPos <- lookup ball
         newPos <- if isColliding ballPos prevPos
-                      then Just $ nonCollidingPosition way ballPos prevPos
+                      then nonCollidingPosition way ballPos prevPos
                       else Nothing
         return $ updatePosition newPos originalPositions
 updatePositionitionUsingPrev _ (_, Nothing) ps = ps
@@ -86,11 +87,15 @@ isColliding :: Position -> Position -> Bool
 isColliding (Position (Ball _ w1) pt1) (Position (Ball _ w2) pt2) =
   (euclideanDistance pt1 pt2) < (w1 + w2)
 
-
 -- Returns a new ball position updated along the way so it is not colliding
 -- with the first ball position.
-nonCollidingPosition :: Way -> Position -> Position -> Position
-nonCollidingPosition _ a _ = a -- TODO
+nonCollidingPosition :: Way -> Position -> Position -> Maybe Position
+nonCollidingPosition (Way ((PointPath points):ps)) = nonCollidingPositionAlongPoints points
+
+nonCollidingPositionAlongPoints :: [Point] -> Position -> Position -> Maybe Position
+nonCollidingPositionAlongPoints points noCollide (Position pBall _) = 
+  liftM (Position pBall) $ find pred points where
+    pred pt = not $ isColliding noCollide (Position pBall pt)
 
 newBallFromGenerator :: BallGenerator -> (Ball, BallGenerator)
 newBallFromGenerator (SequentialGenerator i) = (ball, newGen) where
