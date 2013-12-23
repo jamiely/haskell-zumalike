@@ -18,13 +18,13 @@ data Path = PointPath [Point] deriving (Eq, Show)
 -- A collection of paths that feed into each other
 data Way = Way [Path] deriving (Eq, Show)
 data Chain = Chain [Ball] deriving (Eq, Show)
+data Position = Position Ball Point deriving (Eq, Show)
 data Positions = PositionMap (Map Ball Point) deriving (Eq, Show)
 -- A Transit describes a chain on a certain "Way"
 data Transit = Transit Chain Way Positions deriving (Eq, Show)
 
 data BallGenerator = SequentialGenerator Int deriving (Show)
 data Game = Game BallGenerator [Transit] deriving (Show)
-data Position = Position Ball Point deriving (Show)
 
 euclideanDistance :: Point -> Point -> Double
 euclideanDistance (Point x1 y1) (Point x2 y2) = 
@@ -41,7 +41,8 @@ defaultBallWidth = 2
 updateTransitPositions :: Transit -> Transit
 updateTransitPositions (Transit c@(Chain balls) way originalPositions) =
   Transit c way newPositions where
-  newPositions = foldr fun originalPositions $ ballAndPreviousBall balls
+  ballPairs = ballAndPreviousBall balls
+  newPositions = foldr fun originalPositions ballPairs
   fun = updatePositionsUsingPrev way
 
 updateGamePositions :: Game -> Game
@@ -64,7 +65,7 @@ updatePositionsUsingPrev way (ball, Just previous) originalPositions =
         prevPos <- lookup previous
         ballPos <- lookup ball
         newPos <- if isColliding ballPos prevPos
-                      then nonCollidingPosition way ballPos prevPos
+                      then nonCollidingPosition way prevPos ballPos
                       else Nothing
         return $ updatePosition newPos originalPositions
 updatePositionsUsingPrev _ (_, Nothing) ps = ps
@@ -94,8 +95,11 @@ nonCollidingPositionAlongPath :: Path -> Position -> Position -> Maybe Position
 nonCollidingPositionAlongPath (PointPath points) = nonCollidingPositionAlongPoints points
 
 nonCollidingPositionAlongPoints :: [Point] -> Position -> Position -> Maybe Position
-nonCollidingPositionAlongPoints points noCollide (Position pBall _) = 
-  liftM (Position pBall) $ find pred points where
+nonCollidingPositionAlongPoints points noCollide@(Position _ nPt) (Position pBall _) = 
+  liftM (Position pBall) $ find pred possiblePts where
+    possiblePts = case dropWhile (/= nPt) points of
+                    [] -> []
+                    ls -> tail ls
     pred pt = not $ isColliding noCollide (Position pBall pt)
 
 newBallFromGenerator :: BallGenerator -> (Ball, BallGenerator)
@@ -131,14 +135,6 @@ addBallToTransit ball (Transit (Chain balls) way positions) =
                      Nothing -> positions
     maybeNewPosition = liftM (Position ball) $ firstWayPoint way
 
-addBallToGameInWay :: Game -> Ball -> Way -> Game
-addBallToGameInWay (Game gen transits) ball way = Game gen newTransits where
-  newTransits = map update transits
-  -- updates the transit if it matches the `way` we are looking for
-  update t@(Transit _ way' _) = if (way == way')
-                               then (addBallToTransit ball t)
-                               else t 
-
 addBallToGameInTransit :: Game -> Transit -> Ball -> (Game, Maybe Transit)
 addBallToGameInTransit (Game gen transits) transit ball = (game, maybeNewTransit) where
   game = Game gen newTransits 
@@ -153,7 +149,7 @@ addBallToGameInTransit (Game gen transits) transit ball = (game, maybeNewTransit
 -- Setup some fake data to render
 
 fakeBalls :: [Ball]
-fakeBalls = [Ball i defaultBallWidth | i <- [1 .. 10]]
+fakeBalls = [Ball i defaultBallWidth | i <- [1 .. 3]]
 
 fakeWay :: Way 
 fakeWay = Way [PointPath points] where
@@ -170,8 +166,7 @@ fakeGame = game where
                              Just t -> addBallToGameInTransit game t ball
                              Nothing -> (game, mt)
   (c, _) = foldr addBall (b, Just transit) fakeBalls
-  d = updateGamePositions c
-  game = d
+  game = updateGamePositions c
 
 
 
