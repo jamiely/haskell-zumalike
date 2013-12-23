@@ -6,9 +6,12 @@ import Data.Generics.Aliases(orElse)
 import Control.Monad
 import System.Random (StdGen)
 
+type Width = Int
+type BallId = Int
+
 data Point = Point Int Int deriving (Eq)
 -- a regular ball in Zuma
-data Ball = Ball Int deriving (Eq, Ord)
+data Ball = Ball BallId Width deriving (Eq, Ord)
 -- a contiguous segment which a ball may traverse
 data Path = PointPath [Point] deriving (Eq)
 -- A collection of paths that feed into each other
@@ -26,6 +29,9 @@ data Position = Position Ball Point
 firstWayPoint :: Way -> Maybe Point
 firstWayPoint (Way ((PointPath (pt:_)):_)) = Just pt
 firstWayPoint _ = Nothing
+
+defaultBallWidth :: Width
+defaultBallWidth = 15
 
 -- the game progresses as balls are added to a chain, and 
 -- push other balls forward on their respective way
@@ -47,31 +53,28 @@ ballAndPreviousBall [] = []
 ballAndPreviousBall balls = zip balls $ Nothing : map Just balls
 
 updatePositionitionUsingPrev :: Way -> (Ball, Maybe Ball) -> Positions -> Positions
-updatePositionitionUsingPrev _ (_, Nothing) ps = ps
 updatePositionitionUsingPrev way (ball, Just previous) originalPositions = 
-  if collides then newPositions else originalPositions where
-    -- ball positions
-    maybePrevPosition = getPosition previous originalPositions
-    maybeBallPos = getPosition ball originalPositions
+  case maybePositions of
+    Just p -> p
+    Nothing -> originalPositions 
+    where
+      lookup = getPosition originalPositions
 
-    collides = case maybeCollides of 
-                 Just c -> c
-                 Nothing -> False
-    maybeCollides = liftM2 isColliding maybeBallPos maybePrevPosition
-
-    -- update the positions with a new location
-    newPositions = updatePosition newPos originalPositions
-    newPos = case maybeNewPos of
-               Just p -> p
-               Nothing -> Position ball (Point 0 0)
-    -- update the current ball position so it's not colliding
-    maybeNewPos = liftM2 (nonCollidingPosition way) maybeBallPos maybePrevPosition
+      maybePositions :: Maybe Positions
+      maybePositions = do
+        prevPos <- lookup previous
+        ballPos <- lookup ball
+        newPos <- if isColliding ballPos prevPos
+                      then Just $ nonCollidingPosition way ballPos prevPos
+                      else Nothing
+        return $ updatePosition newPos originalPositions
+updatePositionitionUsingPrev _ (_, Nothing) ps = ps
 
 updatePosition :: Position -> Positions -> Positions
 updatePosition (Position ball point) (PositionMap map) = PositionMap $ Map.insert ball point map 
 
-getPosition :: Ball -> Positions -> Maybe Position
-getPosition ball (PositionMap map) = maybePos where 
+getPosition :: Positions -> Ball -> Maybe Position
+getPosition (PositionMap map) ball = maybePos where 
   maybePos = liftM (Position ball) maybePt
   maybePt = Map.lookup ball map
 
@@ -85,7 +88,7 @@ nonCollidingPosition _ a _ = a -- TODO
 
 newBallFromGenerator :: BallGenerator -> (Ball, BallGenerator)
 newBallFromGenerator (SequentialGenerator i) = (ball, newGen) where
-  ball = Ball i
+  ball = Ball i defaultBallWidth
   newGen = SequentialGenerator $ i + 1
 
 newBall :: Game -> (Ball, Game)
@@ -98,13 +101,16 @@ newBall (Game gen transits) = (ball, game) where
 emptyGame :: Game
 emptyGame = Game (SequentialGenerator 0) []
 
+-- Adds a ball to the passed transit structure, setting its position to the
+-- first waypoint in the way. The transit should be updated to adjust all
+-- positions as soon as possible.
 addBallToTransit :: Ball -> Transit -> Transit
-addBallToTransit ball (Transit (Chain balls) way poss) = 
+addBallToTransit ball (Transit (Chain balls) way positions) = 
   Transit newChain way newPositions where
     newChain = Chain $ ball:balls
     newPositions = case maybeNewPosition of 
-                     Just newPosition -> updatePosition newPosition poss
-                     Nothing -> poss
+                     Just newPosition -> updatePosition newPosition positions
+                     Nothing -> positions
     maybeNewPosition = liftM (Position ball) $ firstWayPoint way
 
 addBallToGameInWay :: Game -> Ball -> Way -> Game
@@ -118,7 +124,7 @@ addBallToGameInWay (Game gen transits) ball way = Game gen newTransits where
 -- Setup some fake data to render
 
 fakeBalls :: [Ball]
-fakeBalls = [Ball i | i <- [1 .. 10]]
+fakeBalls = [Ball i defaultBallWidth | i <- [1 .. 10]]
 
 {-fakeGame :: IO StdGen -> Game-}
 {-fakeGame randGen = Game gen board transits where-}
