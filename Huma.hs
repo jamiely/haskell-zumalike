@@ -90,7 +90,14 @@ isColliding (Position (Ball _ w1) pt1) (Position (Ball _ w2) pt2) =
 -- Returns a new ball position updated along the way so it is not colliding
 -- with the first ball position.
 nonCollidingPosition :: Way -> Position -> Position -> Maybe Position
-nonCollidingPosition (Way ((PointPath points):ps)) = nonCollidingPositionAlongPoints points
+nonCollidingPosition (Way (path:paths)) noCollide pos = 
+  case nonCollidingPositionAlongPath path noCollide pos of
+    newPos@(Just _) -> newPos
+    Nothing -> nonCollidingPosition (Way paths) noCollide pos
+nonCollidingPosition (Way []) _ _ = Nothing
+
+nonCollidingPositionAlongPath :: Path -> Position -> Position -> Maybe Position
+nonCollidingPositionAlongPath (PointPath points) = nonCollidingPositionAlongPoints points
 
 nonCollidingPositionAlongPoints :: [Point] -> Position -> Position -> Maybe Position
 nonCollidingPositionAlongPoints points noCollide (Position pBall _) = 
