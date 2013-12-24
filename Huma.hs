@@ -5,21 +5,24 @@ import qualified Data.Map as Map
 import Data.Generics.Aliases(orElse)
 import Control.Monad
 import System.Random (StdGen)
-import Data.List (find)
+import Data.List (find, elemIndex)
 
 type Width = Double
 type BallId = Int
+type Index = Int
 
 data Point = Point Double Double deriving (Eq, Show)
+data IndexedPoint = IndexedPoint Index Point deriving (Eq, Show)
+
 -- a regular ball in Zuma
 data Ball = Ball BallId Width deriving (Eq, Ord, Show)
 -- a contiguous segment which a ball may traverse
-data Path = PointPath [Point] deriving (Eq, Show)
+data Path = PointPath [IndexedPoint] deriving (Eq, Show)
 -- A collection of paths that feed into each other
 data Way = Way [Path] deriving (Eq, Show)
 data Chain = Chain [Ball] deriving (Eq, Show)
-data Position = Position Ball Point deriving (Eq, Show)
-data Positions = PositionMap (Map Ball Point) deriving (Eq, Show)
+data Position = Position Ball IndexedPoint deriving (Eq, Show)
+data Positions = PositionMap (Map Ball Position) deriving (Eq, Show)
 -- A Transit describes a chain on a certain "Way"
 data Transit = Transit Chain Way Positions deriving (Eq, Show)
 
@@ -31,7 +34,7 @@ euclideanDistance (Point x1 y1) (Point x2 y2) =
   sqrt $ (x1 - x2)**2 + (y1 - y2)**2
 
 -- Returns the first way point availble on the way
-firstWayPoint :: Way -> Maybe Point
+firstWayPoint :: Way -> Maybe IndexedPoint
 firstWayPoint (Way ((PointPath (pt:_)):_)) = Just pt
 firstWayPoint _ = Nothing
 
@@ -76,17 +79,16 @@ updatePositionsUsingPrev way (ball, Just previous) originalPositions =
 updatePositionsUsingPrev _ (_, Nothing) ps = ps
 
 updatePosition :: Position -> Positions -> Positions
-updatePosition (Position ball point) (PositionMap map) = 
-  PositionMap $ Map.insert ball point map 
+updatePosition p@(Position ball point) (PositionMap map) = 
+  PositionMap $ Map.insert ball p map 
 
 getPosition :: Positions -> Ball -> Maybe Position
-getPosition (PositionMap map) ball = maybePos where 
-  maybePos = liftM (Position ball) maybePt
-  maybePt = Map.lookup ball map
+getPosition (PositionMap map) ball = Map.lookup ball map where 
 
 isColliding :: Position -> Position -> Bool
-isColliding (Position (Ball _ w1) pt1) (Position (Ball _ w2) pt2) =
-  (euclideanDistance pt1 pt2) < (w1 + w2)
+isColliding (Position (Ball _ w1) (IndexedPoint _ pt1)) 
+  (Position (Ball _ w2) (IndexedPoint _ pt2)) =
+    (euclideanDistance pt1 pt2) < (w1 + w2)
 
 -- Returns a new ball position updated along the way so it is not colliding
 -- with the first ball position.
@@ -100,13 +102,21 @@ nonCollidingPosition (Way []) _ _ = Nothing
 nonCollidingPositionAlongPath :: Path -> Position -> Position -> Maybe Position
 nonCollidingPositionAlongPath (PointPath points) = nonCollidingPositionAlongPoints points
 
-nonCollidingPositionAlongPoints :: [Point] -> Position -> Position -> Maybe Position
-nonCollidingPositionAlongPoints points noCollide@(Position _ nPt) (Position pBall _) = 
-  liftM (Position pBall) $ find pred possiblePts where
+nonCollidingPositionAlongPoints :: [IndexedPoint] -> Position -> Position -> Maybe Position
+nonCollidingPositionAlongPoints points noCollide@(Position _ nPt@(IndexedPoint nInd _)) (Position pBall _) = 
+  maybePosition where 
+    maybePosition = do
+      point <- find (not . pred) possiblePts
+      index <- elemIndex point points
+      return $ Position pBall point
     possiblePts = case dropWhile (/= nPt) points of
                     [] -> []
                     l:ls -> ls
-    pred pt = not $ isColliding noCollide (Position pBall pt)
+    collides :: IndexedPoint -> Bool
+    collides pt = isColliding noCollide (Position pBall pt)
+    pred :: IndexedPoint -> Bool
+    pred pt@(IndexedPoint index _) = collides pt || nInd >= index
+
 
 newBallFromGenerator :: BallGenerator -> (Ball, BallGenerator)
 newBallFromGenerator (SequentialGenerator i) = (ball, newGen) where
@@ -159,7 +169,8 @@ fakeBalls = [Ball i defaultBallWidth | i <- [1 .. 3]]
 
 fakeWay :: Way 
 fakeWay = Way [PointPath points] where
-  points = [Point x 10 | x <- [1 .. 10]]
+  points = map (\(x, y) -> IndexedPoint x y) 
+    [(x, Point (fromIntegral x) 10) | x <- [1 .. 10]]
 
 fakeTransit :: Transit
 fakeTransit = emptyTransit fakeWay

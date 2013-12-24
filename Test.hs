@@ -19,17 +19,25 @@ balls = [ball1, ball2, ball3]
 origin :: Point
 origin = Point 1.0 1.0
 
+indexedOrigin = IndexedPoint 1 origin
+indexedPoint2 = IndexedPoint 5 $ Point 5.0 1.0
+indexedPoint3 = IndexedPoint 9 $ Point 9.0 1.0
+
+testIndexedPoints :: [IndexedPoint]
+testIndexedPoints = map (\(x, y) -> IndexedPoint x y) 
+  [(x, Point (fromIntegral x) 1.0) | x <- [1 .. 10]]
+
 testPoints :: [Point]
-testPoints = [Point x 1.0 | x <- [1 .. 10]]
+testPoints = map (\(IndexedPoint _ pt) -> pt) testIndexedPoints
 
 testWay :: Way
-testWay = Way [PointPath testPoints]
+testWay = Way [PointPath testIndexedPoints]
 
 testNonCollidingPosition :: HUnit.Test
 testNonCollidingPosition = TestCase assertion where
   assertion = assertEqual "Non colliding position" expectedPosition actualPosition
-  posWithBall ball = Position ball origin
-  expectedPosition = Just $ Position ball2 $ Point 5.0 1.0
+  posWithBall ball = Position ball indexedOrigin
+  expectedPosition = Just $ Position ball2 indexedPoint2
   actualPosition = nonCollidingPosition testWay p1 p2 
   p1 = posWithBall ball1
   p2 = posWithBall ball2
@@ -37,10 +45,10 @@ testNonCollidingPosition = TestCase assertion where
 testNonCollidingPositionAlongPoints :: HUnit.Test
 testNonCollidingPositionAlongPoints = TestCase assertion where
   assertion = assertEqual "nonCollidingPositionAlongPoints" ex act
-  ex = Just $ Position ball3 $ Point 9.0 1.0
-  act = nonCollidingPositionAlongPoints testPoints
-    (Position ball2 (Point 5.0 1.0))
-    $ Position ball3 origin
+  ex = Just $ Position ball3 indexedPoint3
+  act = nonCollidingPositionAlongPoints testIndexedPoints
+    (Position ball2 indexedPoint2)
+    $ Position ball3 indexedOrigin
 
 testBallAndPreviousBall :: HUnit.Test
 testBallAndPreviousBall = TestCase $ assertEqual "ballAndPreviousBall" 
@@ -50,34 +58,34 @@ testBallAndPreviousBall = TestCase $ assertEqual "ballAndPreviousBall"
 testUpdatePositionsUsingPrev :: HUnit.Test
 testUpdatePositionsUsingPrev = TestCase $ assertEqual "updatePositionsUsingPrev" ex act where
   exWay = testWay
-  testPositions = PositionMap $ Map.fromList [(ball1, origin),
-                                              (ball2, Point 5.0 1.0),
-                                              (ball3, Point 5.0 1.0)]
-  ex = PositionMap $ Map.fromList [(ball1, origin),
-                                   (ball2, Point 5.0 1.0),
-                                   (ball3, Point 9.0 1.0)]
+  testPositions = PositionMap $ Map.fromList [(ball1, Position ball1 indexedOrigin),
+                                              (ball2, Position ball2 indexedPoint2),
+                                              (ball3, Position ball3 indexedPoint2)]
+  ex = PositionMap $ Map.fromList [(ball1, Position ball1 indexedOrigin),
+                                   (ball2, Position ball2 indexedPoint2),
+                                   (ball3, Position ball3 indexedPoint3)]
   act = updatePositionsUsingPrev exWay (ball3, Just ball2) testPositions
 
 testUpdatePositionsUsingPrev2 :: HUnit.Test
 testUpdatePositionsUsingPrev2 = TestCase $ assertEqual "updatePositionsUsingPrev2" ex act where
   exWay = testWay
-  testPositions = PositionMap $ Map.fromList [(ball1, origin),
-                                              (ball2, Point 5.0 1.0),
-                                              (ball3, origin)]
-  ex = PositionMap $ Map.fromList [(ball1, origin),
-                                   (ball2, Point 5.0 1.0),
-                                   (ball3, Point 9.0 1.0)]
+  testPositions = PositionMap $ Map.fromList [(ball1, Position ball1 indexedOrigin),
+                                              (ball2, Position ball2 indexedPoint2),
+                                              (ball3, Position ball3 indexedOrigin)]
+  ex = PositionMap $ Map.fromList [(ball1, Position ball1 indexedOrigin),
+                                   (ball2, Position ball2 indexedPoint2),
+                                   (ball3, Position ball3 indexedPoint3)]
   act = updatePositionsUsingPrev exWay (ball3, Just ball2) testPositions
 
 testUpdateTransitPositions :: HUnit.Test
 testUpdateTransitPositions = TestCase $ assertEqual "updateTransitPositions" ex act where
   exWay = testWay
   exChain = Chain balls
-  testPositions = PositionMap $ Map.fromList $ map (\b -> (b, origin)) balls
+  testPositions = PositionMap $ Map.fromList $ map (\b -> (b, Position b indexedOrigin)) balls
   testTransit = Transit exChain exWay testPositions
-  exPositions = PositionMap $ Map.fromList [(ball1, origin),
-                                            (ball2, Point 5.0 1.0),
-                                            (ball3, Point 9.0 1.0)]
+  exPositions = PositionMap $ Map.fromList [(ball1, Position ball1 indexedOrigin),
+                                            (ball2, Position ball2 indexedPoint2),
+                                            (ball3, Position ball3 indexedPoint3)]
   ex = Transit exChain exWay exPositions
   act = updateTransitPositions testTransit
 
