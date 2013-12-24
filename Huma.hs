@@ -72,10 +72,16 @@ updatePositionsUsingPrev way (ball, Just previous) originalPositions =
       maybePositions = do
         prevPos <- lookup previous
         ballPos <- lookup ball
-        newPos <- if isColliding ballPos prevPos
+        newPos <- if needsNewPosition ballPos prevPos
                       then nonCollidingPosition way prevPos ballPos
                       else Nothing
         return $ updatePosition newPos originalPositions
+
+      needsNewPosition :: Position -> Position -> Bool
+      needsNewPosition ballPos@(Position _ (IndexedPoint ballInd _)) 
+        prevPos@(Position _ (IndexedPoint prevInd _)) = 
+          isColliding ballPos prevPos || ballInd < prevInd
+
 updatePositionsUsingPrev _ (_, Nothing) ps = ps
 
 updatePosition :: Position -> Positions -> Positions
