@@ -119,3 +119,4 @@ main :: IO ()
 main = defaultMainWithOpts
        [testGroup "Hunit tests" hunitTests] mempty where
        hunitTests = hUnitTestToTests tests
+

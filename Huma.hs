@@ -7,11 +7,11 @@ import Control.Monad
 import System.Random (StdGen)
 import Data.List (find, elemIndex)
 
-type Width = Double
+type Width = Float
 type BallId = Int
 type Index = Int
 
-data Point = Point Double Double deriving (Eq, Show)
+data Point = Point Float Float deriving (Eq, Show)
 data IndexedPoint = IndexedPoint Index Point deriving (Eq, Show)
 
 -- a regular ball in Zuma
@@ -34,7 +34,7 @@ generateBall (SequentialGenerator i w) = (ball, newGen) where
   ball = Ball i w
   newGen = SequentialGenerator (i + 1) w
 
-euclideanDistance :: Point -> Point -> Double
+euclideanDistance :: Point -> Point -> Float
 euclideanDistance (Point x1 y1) (Point x2 y2) = 
   sqrt $ (x1 - x2)**2 + (y1 - y2)**2
 
@@ -44,7 +44,7 @@ firstWayPoint (Way ((PointPath (pt:_)):_)) = Just pt
 firstWayPoint _ = Nothing
 
 defaultBallWidth :: Width
-defaultBallWidth = 2
+defaultBallWidth = 20
 
 updateTransitPositions :: Transit -> Transit
 updateTransitPositions (Transit c@(Chain balls) way originalPositions) =
@@ -182,7 +182,7 @@ fakeTransit = emptyTransit fakeWay
 fakeGame :: Game
 fakeGame = game where
   transit = fakeTransit
-  b@(Game gen bTransits) = addTransitToGame emptyGame transit 
+  b@(Game gen bTransits) = addTransitToGame (Game (SequentialGenerator 1 2) []) transit 
   addBall ball (game, mt) = case mt of
                              Just t -> addBallToGameInTransit game t ball
                              Nothing -> (game, mt)
@@ -191,6 +191,23 @@ fakeGame = game where
   fun (balls, g) _ = case newBall g of
                        (b, g') -> (b:balls, g') 
   game = updateGamePositions c
+
+
+fakeGame2 :: Game
+fakeGame2 = game where
+  transit = emptyTransit fakeWay2
+  b@(Game gen bTransits) = addTransitToGame (Game (SequentialGenerator 1 30) []) transit 
+  addBall ball (game, mt) = case mt of
+                             Just t -> addBallToGameInTransit game t ball
+                             Nothing -> (game, mt)
+  (c, _) = foldr addBall (b1, Just transit) $ reverse balls
+  (balls, b1) = foldl fun ([], b) [1..5]
+  fun (balls, g) _ = case newBall g of
+                       (b, g') -> (b:balls, g') 
+  game = updateGamePositions c
+  fakeWay2 = Way [PointPath points] where
+    points = map (\(x, y) -> IndexedPoint x y) 
+      [(x, Point (fromIntegral x) 10) | x <- [0, 10 .. 300]]
 
 
 
