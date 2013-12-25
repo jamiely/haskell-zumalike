@@ -45,13 +45,7 @@ updateTransitPositions :: Transit -> Transit
 updateTransitPositions (Transit c@(Chain balls) way originalPositions) =
   Transit c way newPositions where
   ballPairs = ballAndPreviousBall balls
-  newPositions = foldr fun originalPositions ballPairs
-  {-newPositions = funNewPositions ballPairs originalPositions -}
-  {-funNewPositions (pair:pairs) pos = funNewPositions pairs updatedPos where-}
-    {-updatedPos = updatePositionsUsingPrev way pair pos-}
-  {-funNewPositions [] pos = pos-}
-
-  fun = updatePositionsUsingPrev way
+  newPositions = foldl (flip $ updatePositionsUsingPrev way) originalPositions ballPairs
 
 updateGamePositions :: Game -> Game
 updateGamePositions (Game gen transits) = Game gen $ map updateTransitPositions transits
@@ -64,7 +58,7 @@ updatePositionsUsingPrev :: Way -> (Ball, Maybe Ball) -> Positions -> Positions
 updatePositionsUsingPrev way (ball, Just previous) originalPositions = 
   case maybePositions of
     Just p -> p
-    Nothing -> originalPositions 
+    Nothing -> originalPositions
     where
       lookup = getPosition originalPositions
 
@@ -73,16 +67,20 @@ updatePositionsUsingPrev way (ball, Just previous) originalPositions =
         prevPos <- lookup previous
         ballPos <- lookup ball
         newPos <- if needsNewPosition ballPos prevPos
-                      then nonCollidingPosition way prevPos ballPos
-                      else Nothing
+                    then nonCollidingPosition way prevPos ballPos
+                    else Nothing
         return $ updatePosition newPos originalPositions
 
-      needsNewPosition :: Position -> Position -> Bool
-      needsNewPosition ballPos@(Position _ (IndexedPoint ballInd _)) 
-        prevPos@(Position _ (IndexedPoint prevInd _)) = 
-          isColliding ballPos prevPos || ballInd < prevInd
-
 updatePositionsUsingPrev _ (_, Nothing) ps = ps
+
+needsNewPosition :: Position -> Position -> Bool
+needsNewPosition ballPos prevPos = collides || lteIndex where
+  collides = isColliding ballPos prevPos 
+  lteIndex = compareIndices (<=) ballPos prevPos
+
+compareIndices :: (Index -> Index -> Bool) -> Position -> Position -> Bool
+compareIndices fun (Position _ (IndexedPoint i1 _)) (Position _ (IndexedPoint i2 _)) = 
+  fun i1 i2
 
 updatePosition :: Position -> Positions -> Positions
 updatePosition p@(Position ball point) (PositionMap map) = 
