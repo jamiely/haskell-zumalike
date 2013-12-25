@@ -26,8 +26,13 @@ data Positions = PositionMap (Map Ball Position) deriving (Eq, Show)
 -- A Transit describes a chain on a certain "Way"
 data Transit = Transit Chain Way Positions deriving (Eq, Show)
 
-data BallGenerator = SequentialGenerator Int deriving (Show)
-data Game = Game BallGenerator [Transit] deriving (Show)
+data BallGenerator = SequentialGenerator Index Width deriving (Show, Eq)
+data Game = Game BallGenerator [Transit] deriving (Show, Eq)
+
+generateBall :: BallGenerator -> (Ball, BallGenerator)
+generateBall (SequentialGenerator i w) = (ball, newGen) where
+  ball = Ball i w
+  newGen = SequentialGenerator (i + 1) w
 
 euclideanDistance :: Point -> Point -> Double
 euclideanDistance (Point x1 y1) (Point x2 y2) = 
@@ -122,20 +127,15 @@ nonCollidingPositionAlongPoints points noCollide@(Position _ nPt@(IndexedPoint n
     pred pt@(IndexedPoint index _) = collides pt || nInd >= index
 
 
-newBallFromGenerator :: BallGenerator -> (Ball, BallGenerator)
-newBallFromGenerator (SequentialGenerator i) = (ball, newGen) where
-  ball = Ball i defaultBallWidth
-  newGen = SequentialGenerator $ i + 1
-
 newBall :: Game -> (Ball, Game)
 newBall (Game gen transits) = (ball, game) where 
-  (ball, newGen) = newBallFromGenerator gen
+  (ball, newGen) = generateBall gen
   game = Game newGen transits
 
 -- Construction functions
 
 emptyGame :: Game
-emptyGame = Game (SequentialGenerator 0) []
+emptyGame = Game (SequentialGenerator 1 defaultBallWidth) []
 
 addTransitToGame :: Game -> Transit -> Game
 addTransitToGame (Game gen transits) t = Game gen (t:transits)
@@ -174,7 +174,7 @@ fakeBalls = [Ball i defaultBallWidth | i <- [1 .. 3]]
 fakeWay :: Way 
 fakeWay = Way [PointPath points] where
   points = map (\(x, y) -> IndexedPoint x y) 
-    [(x, Point (fromIntegral x) 10) | x <- [1 .. 10]]
+    [(x, Point (fromIntegral x) 10) | x <- [0, 5 .. 30]]
 
 fakeTransit :: Transit
 fakeTransit = emptyTransit fakeWay
@@ -182,11 +182,14 @@ fakeTransit = emptyTransit fakeWay
 fakeGame :: Game
 fakeGame = game where
   transit = fakeTransit
-  b = addTransitToGame emptyGame transit 
+  b@(Game gen bTransits) = addTransitToGame emptyGame transit 
   addBall ball (game, mt) = case mt of
                              Just t -> addBallToGameInTransit game t ball
                              Nothing -> (game, mt)
-  (c, _) = foldr addBall (b, Just transit) fakeBalls
+  (c, _) = foldr addBall (b1, Just transit) $ reverse balls
+  (balls, b1) = foldl fun ([], b) [1..5]
+  fun (balls, g) _ = case newBall g of
+                       (b, g') -> (b:balls, g') 
   game = updateGamePositions c
 
 

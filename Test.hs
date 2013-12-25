@@ -90,9 +90,19 @@ testUpdateTransitPositions = TestCase $ assertEqual "updateTransitPositions" ex 
   act = updateTransitPositions testTransit
 
 testFakeGame :: HUnit.Test
-testFakeGame = TestCase $ assertEqual "fakeGame" 
-    "Game (SequentialGenerator 0) [Transit (Chain [Ball 1 2.0,Ball 2 2.0,Ball 3 2.0]) (Way [PointPath [Point 1.0 10.0,Point 2.0 10.0,Point 3.0 10.0,Point 4.0 10.0,Point 5.0 10.0,Point 6.0 10.0,Point 7.0 10.0,Point 8.0 10.0,Point 9.0 10.0,Point 10.0 10.0]]) (PositionMap (fromList [(Ball 1 2.0,Point 1.0 10.0),(Ball 2 2.0,Point 5.0 10.0),(Ball 3 2.0,Point 10.0 10.0)]))]"
-    $ show fakeGame
+testFakeGame = TestCase $ assertEqual "fakeGame" ex act where
+    ex = Game (SequentialGenerator 6 2.0) [Transit (Chain [Ball 1 2.0,Ball 2
+      2.0,Ball 3 2.0,Ball 4 2.0,Ball 5 2.0]) (Way [PointPath [IndexedPoint 0
+      (Point 0.0 10.0),IndexedPoint 5 (Point 5.0 10.0),IndexedPoint 10 (Point
+      10.0 10.0),IndexedPoint 15 (Point 15.0 10.0),IndexedPoint 20 (Point 20.0
+      10.0),IndexedPoint 25 (Point 25.0 10.0),IndexedPoint 30 (Point 30.0
+      10.0)]]) (PositionMap (Map.fromList [(Ball 1 2.0,Position (Ball 1 2.0)
+      (IndexedPoint 0 (Point 0.0 10.0))),(Ball 2 2.0,Position (Ball 2 2.0)
+      (IndexedPoint 5 (Point 5.0 10.0))),(Ball 3 2.0,Position (Ball 3 2.0)
+      (IndexedPoint 10 (Point 10.0 10.0))),(Ball 4 2.0,Position (Ball 4 2.0)
+      (IndexedPoint 15 (Point 15.0 10.0))),(Ball 5 2.0,Position (Ball 5 2.0)
+      (IndexedPoint 20 (Point 20.0 10.0)))]))]
+    act = fakeGame
 
 -- Some Tests
 tests = TestList [ 
