@@ -6,16 +6,25 @@ import Data.Generics.Aliases(orElse)
 import Control.Monad
 import System.Random (StdGen)
 import Data.List (find, elemIndex)
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 
 type Width = Float
 type BallId = Int
 type Index = Int
+data BallColor = Red | Green | Blue | Yellow | Cyan | Magenta deriving (Eq, Show, Ord)
+
+colors :: Seq BallColor
+colors = Seq.fromList [Red, Green, Blue, Yellow, Cyan, Magenta]
+
+colorMod :: Int -> BallColor
+colorMod i = Seq.index colors $ i `rem` (Seq.length colors)
 
 data Point = Point Float Float deriving (Eq, Show)
 data IndexedPoint = IndexedPoint Index Point deriving (Eq, Show)
 
 -- a regular ball in Zuma
-data Ball = Ball BallId Width deriving (Eq, Ord, Show)
+data Ball = Ball BallId Width BallColor deriving (Eq, Ord, Show)
 -- a contiguous segment which a ball may traverse
 data Path = PointPath [IndexedPoint] deriving (Eq, Show)
 -- A collection of paths that feed into each other
@@ -31,7 +40,7 @@ data Game = Game BallGenerator [Transit] deriving (Show, Eq)
 
 generateBall :: BallGenerator -> (Ball, BallGenerator)
 generateBall (SequentialGenerator i w) = (ball, newGen) where
-  ball = Ball i w
+  ball = Ball i w $ colorMod i
   newGen = SequentialGenerator (i + 1) w
 
 euclideanDistance :: Point -> Point -> Float
@@ -95,8 +104,8 @@ getPosition :: Positions -> Ball -> Maybe Position
 getPosition (PositionMap map) ball = Map.lookup ball map where 
 
 isColliding :: Position -> Position -> Bool
-isColliding (Position (Ball _ w1) (IndexedPoint _ pt1)) 
-  (Position (Ball _ w2) (IndexedPoint _ pt2)) =
+isColliding (Position (Ball _ w1 _) (IndexedPoint _ pt1)) 
+  (Position (Ball _ w2 _) (IndexedPoint _ pt2)) =
     (euclideanDistance pt1 pt2) < (w1 + w2)
 
 -- Returns a new ball position updated along the way so it is not colliding
@@ -169,7 +178,7 @@ addBallToGameInTransit (Game gen transits) transit ball = (game, maybeNewTransit
 -- Setup some fake data to render
 
 fakeBalls :: [Ball]
-fakeBalls = [Ball i defaultBallWidth | i <- [1 .. 3]]
+fakeBalls = [Ball i defaultBallWidth (colorMod i) | i <- [1 .. 3]]
 
 fakeWay :: Way 
 fakeWay = Way [PointPath points] where
@@ -201,13 +210,13 @@ fakeGame2 = game where
                              Just t -> addBallToGameInTransit game t ball
                              Nothing -> (game, mt)
   (c, _) = foldr addBall (b1, Just transit) $ reverse balls
-  (balls, b1) = foldl fun ([], b) [1..5]
+  (balls, b1) = foldl fun ([], b) [1..10]
   fun (balls, g) _ = case newBall g of
                        (b, g') -> (b:balls, g') 
   game = updateGamePositions c
   fakeWay2 = Way [PointPath points] where
     points = map (\(x, y) -> IndexedPoint x y) 
-      [(x, Point (fromIntegral x) 10) | x <- [0, 10 .. 300]]
+      [(x, Point (fromIntegral x) 10) | x <- [0, 5 .. 500]]
 
 
 

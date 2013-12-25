@@ -11,9 +11,9 @@ import qualified Data.Map as Map
 import Test.QuickCheck
 import Huma
 
-ball1 = Ball 1 2.0
-ball2 = Ball 2 2.0
-ball3 = Ball 3 2.0
+ball1 = Ball 1 2.0 Red
+ball2 = Ball 2 2.0 Red
+ball3 = Ball 3 2.0 Red
 balls = [ball1, ball2, ball3]
 
 origin :: Point
@@ -91,16 +91,16 @@ testUpdateTransitPositions = TestCase $ assertEqual "updateTransitPositions" ex 
 
 testFakeGame :: HUnit.Test
 testFakeGame = TestCase $ assertEqual "fakeGame" ex act where
-    ex = Game (SequentialGenerator 6 2.0) [Transit (Chain [Ball 1 2.0,Ball 2
-      2.0,Ball 3 2.0,Ball 4 2.0,Ball 5 2.0]) (Way [PointPath [IndexedPoint 0
+    ex = Game (SequentialGenerator 6 2.0) [Transit (Chain [Ball 1 2.0 Red,Ball 2
+      2.0 Red,Ball 3 2.0 Red,Ball 4 2.0 Red,Ball 5 2.0 Red]) (Way [PointPath [IndexedPoint 0
       (Point 0.0 10.0),IndexedPoint 5 (Point 5.0 10.0),IndexedPoint 10 (Point
       10.0 10.0),IndexedPoint 15 (Point 15.0 10.0),IndexedPoint 20 (Point 20.0
       10.0),IndexedPoint 25 (Point 25.0 10.0),IndexedPoint 30 (Point 30.0
-      10.0)]]) (PositionMap (Map.fromList [(Ball 1 2.0,Position (Ball 1 2.0)
-      (IndexedPoint 0 (Point 0.0 10.0))),(Ball 2 2.0,Position (Ball 2 2.0)
-      (IndexedPoint 5 (Point 5.0 10.0))),(Ball 3 2.0,Position (Ball 3 2.0)
-      (IndexedPoint 10 (Point 10.0 10.0))),(Ball 4 2.0,Position (Ball 4 2.0)
-      (IndexedPoint 15 (Point 15.0 10.0))),(Ball 5 2.0,Position (Ball 5 2.0)
+      10.0)]]) (PositionMap (Map.fromList [(Ball 1 2.0 Red,Position (Ball 1 2.0 Red)
+      (IndexedPoint 0 (Point 0.0 10.0))),(Ball 2 2.0 Red,Position (Ball 2 2.0 Red)
+      (IndexedPoint 5 (Point 5.0 10.0))),(Ball 3 2.0 Red,Position (Ball 3 2.0 Red)
+      (IndexedPoint 10 (Point 10.0 10.0))),(Ball 4 2.0 Red,Position (Ball 4 2.0 Red)
+      (IndexedPoint 15 (Point 15.0 10.0))),(Ball 5 2.0 Red,Position (Ball 5 2.0 Red)
       (IndexedPoint 20 (Point 20.0 10.0)))]))]
     act = fakeGame
 

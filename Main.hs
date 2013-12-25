@@ -24,7 +24,7 @@ main = do
 
 drawGame :: (Game, Play) -> IO Picture
 {-drawGame (game, _) = return (grid <> plays)-}
-drawGame (game, _) = return (grid <> gamePicture) where
+drawGame (game, _) = return (grid <> translate (-200) (200) gamePicture) where
   grid = 
     color black (line [ (-100, -300), (-100,  300) ]) <>
     color black (line [ ( 100, -300), ( 100,  300) ]) <>
@@ -50,8 +50,16 @@ drawTransit (Transit chain way (PositionMap positionMap)) =
   foldr (<>) Blank $ map drawPosition $ map snd $ Map.toList positionMap
 
 drawPosition :: Position -> Picture
-drawPosition (Position (Ball _ width) (IndexedPoint _ (Point x y))) = 
-  translate x y $ color red $ circle width
+drawPosition (Position (Ball _ width ballColor) (IndexedPoint _ (Point x y))) = 
+  translate x y $ color (ballToGlossColor ballColor) $ circle width
+
+ballToGlossColor :: BallColor -> Color
+ballToGlossColor Red = red
+ballToGlossColor Green = green
+ballToGlossColor Blue = blue
+ballToGlossColor Yellow = yellow
+ballToGlossColor Magenta = magenta
+ballToGlossColor Cyan = cyan
 
 handleInput :: Event -> (Game, Play) -> IO (Game, Play)
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y))
