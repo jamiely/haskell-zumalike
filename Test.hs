@@ -91,18 +91,36 @@ testUpdateTransitPositions = TestCase $ assertEqual "updateTransitPositions" ex 
 
 testFakeGameState :: HUnit.Test
 testFakeGameState = TestCase $ assertEqual "fakeGameState" ex act where
-    ex = GameState (SequentialGenerator 6 2.0) [Transit (Chain [Ball 1 2.0 Red,Ball 2
-      2.0 Red,Ball 3 2.0 Red,Ball 4 2.0 Red,Ball 5 2.0 Red]) (Way [PointPath [IndexedPoint 0
-      (Point 0.0 10.0),IndexedPoint 5 (Point 5.0 10.0),IndexedPoint 10 (Point
-      10.0 10.0),IndexedPoint 15 (Point 15.0 10.0),IndexedPoint 20 (Point 20.0
-      10.0),IndexedPoint 25 (Point 25.0 10.0),IndexedPoint 30 (Point 30.0
-      10.0)]]) (PositionMap (Map.fromList [(Ball 1 2.0 Red,Position (Ball 1 2.0 Red)
-      (IndexedPoint 0 (Point 0.0 10.0))),(Ball 2 2.0 Red,Position (Ball 2 2.0 Red)
-      (IndexedPoint 5 (Point 5.0 10.0))),(Ball 3 2.0 Red,Position (Ball 3 2.0 Red)
-      (IndexedPoint 10 (Point 10.0 10.0))),(Ball 4 2.0 Red,Position (Ball 4 2.0 Red)
-      (IndexedPoint 15 (Point 15.0 10.0))),(Ball 5 2.0 Red,Position (Ball 5 2.0 Red)
-      (IndexedPoint 20 (Point 20.0 10.0)))]))]
+    ex = GameState (SequentialGenerator 6 2.0) [Transit (Chain [Ball 1 2.0 Green,Ball 2 2.0 Blue,Ball 3 2.0 Yellow,Ball 4 2.0 Cyan,Ball 5 2.0 Magenta]) (Way [PointPath [IndexedPoint 0 (Point 0.0 10.0),IndexedPoint 5 (Point 5.0 10.0),IndexedPoint 10 (Point 10.0 10.0),IndexedPoint 15 (Point 15.0 10.0),IndexedPoint 20 (Point 20.0 10.0),IndexedPoint 25 (Point 25.0 10.0),IndexedPoint 30 (Point 30.0 10.0)]]) (PositionMap (Map.fromList [(Ball 1 2.0 Green,Position (Ball 1 2.0 Green) (IndexedPoint 0 (Point 0.0 10.0))),(Ball 2 2.0 Blue,Position (Ball 2 2.0 Blue) (IndexedPoint 5 (Point 5.0 10.0))),(Ball 3 2.0 Yellow,Position (Ball 3 2.0 Yellow) (IndexedPoint 10 (Point 10.0 10.0))),(Ball 4 2.0 Cyan,Position (Ball 4 2.0 Cyan) (IndexedPoint 15 (Point 15.0 10.0))),(Ball 5 2.0 Magenta,Position (Ball 5 2.0 Magenta) (IndexedPoint 20 (Point 20.0 10.0)))]))]
     act = fakeGameState
+
+testMoveBallUp :: HUnit.Test
+testMoveBallUp = TestList [
+    TestCase $ assertEqual "wayPointGivenIndex" 
+      (Just ip2) (wayPointGivenIndex way 1),
+    TestCase $ assertEqual "incrementPointIndex" 
+      (Just ip2) (incrementPointIndex way ip1),
+    TestCase $ assertEqual "incrementPointIndex" 
+      (Just ip4) (incrementPointIndex way ip3),
+    TestCase $ assertEqual "moveFirstBallForwardInTransit" ex1 act1
+  ] where
+  chain = Chain [ball1, ball2, ball3]
+  ip1 = IndexedPoint 0 $ origin
+  ip2 = IndexedPoint 1 $ Point 5.0 1.0
+  ip3 = IndexedPoint 2 $ Point 9.0 1.0
+  ip4 = IndexedPoint 3 $ Point 13.0 1.0
+  
+  points = [ip1, ip2, ip3, ip4]
+  way = Way [PointPath points]
+  baseTransit = Transit chain way (PositionMap originalPositions)
+  originalPositions = Map.fromList [(ball1, Position ball1 ip1),
+                                    (ball2, Position ball2 ip2),
+                                    (ball3, Position ball3 ip3)]
+  ex1 = Transit chain way (PositionMap expectedPositions)
+  expectedPositions = Map.fromList [(ball1, Position ball1 ip2),
+                                    (ball2, Position ball2 ip2),
+                                    (ball3, Position ball3 ip3)]
+  act1 = moveFirstBallForwardInTransit baseTransit
 
 -- Some Tests
 tests = TestList [ 
@@ -112,7 +130,8 @@ tests = TestList [
     testUpdatePositionsUsingPrev,
     testUpdatePositionsUsingPrev2,
     testUpdateTransitPositions,
-    testFakeGameState
+    testFakeGameState,
+    testMoveBallUp
   ] where
 
 main :: IO ()

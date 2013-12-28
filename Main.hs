@@ -54,17 +54,8 @@ ballToGlossColor Cyan = cyan
 handleInput :: Event -> (GameState, Play) -> IO (GameState, Play)
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y))
   (game, p) = do
-    putStrLn $ show game
     let newGameState = game -- TODO: add ball to game in first transit
     return (newGameState, p)
-    {-let snap = (+1) . min 1 . max (-1) . fromIntegral . floor . (/ 100) .-}
-           {-(+ 50)-}
-    {-(gridX, gridY) = (snap x, snap y)-}
-    {-case (game !! gridX) !! gridY of-}
-      {-Just _ -> return (game, X)-}
-      {-Nothing -> do-}
-        {-let newGameState = (ix gridX . ix gridY .~ (Just X)) game-}
-        {-return (newGameState, O)-}
 
 handleInput (EventKey (Char 'a') Up _ _) (game, p) = do
   putStrLn "Add a ball"
@@ -73,9 +64,16 @@ handleInput (EventKey (Char 'a') Up _ _) (game, p) = do
   newGameState2 = updateGameStatePositions newGameState1
   addBallToGameStateInFirstTransit g@(GameState _ (t:ts)) = addNewBallToGameStateInTransit g t
   addBallToGameStateInFirstTransit g = (g, Nothing)
+handleInput (EventKey (Char '?') Up _ _) (game, p) = do
+  putStrLn $ show game
+  return (game, p)
+
+handleInput (EventKey (Char 'n') Up _ _) (game, p) = do
+  putStrLn "Tick"
+  return (moveFirstBallForwardInGameStateAndUpdate game, p)
   
 handleInput _ a = return a
 
 stepGameState :: Float -> (GameState, Play) -> IO (GameState, Play)
-stepGameState _ = return
-
+stepGameState f (game, p) = 
+  return (moveFirstBallForwardInGameStateAndUpdate game, p)

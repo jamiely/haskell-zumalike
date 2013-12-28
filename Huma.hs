@@ -143,7 +143,7 @@ incrementPointIndex :: Way -> IndexedPoint -> Maybe IndexedPoint
 incrementPointIndex way (IndexedPoint index pt) = wayPointGivenIndex way $ index + 1
 
 wayPointGivenIndex :: Way -> Index -> Maybe IndexedPoint
-wayPointGivenIndex (Way ((PointPath points):ps)) i = if (length points) < i 
+wayPointGivenIndex (Way ((PointPath points):ps)) i = if (length points) > i 
                                                        then Just (points !! i)
                                                        else Nothing
 wayPointGivenIndex _ _ = Nothing
@@ -191,6 +191,26 @@ addNewBallToGameStateInTransit :: GameState -> Transit -> (GameState, Maybe Tran
 addNewBallToGameStateInTransit gameState transit = finalGameState where
   (ball, newGameState) = newBall gameState
   finalGameState = addBallToGameStateInTransit newGameState transit ball
+
+moveFirstBallForwardInGameState :: GameState -> GameState
+moveFirstBallForwardInGameState (GameState gen transits) = 
+  GameState gen $ map moveFirstBallForwardInTransit transits
+
+moveFirstBallForwardInGameStateAndUpdate :: GameState -> GameState 
+moveFirstBallForwardInGameStateAndUpdate = updateGameStatePositions . moveFirstBallForwardInGameState
+
+moveFirstBallForwardInTransit :: Transit -> Transit
+moveFirstBallForwardInTransit (Transit c@(Chain (b:bs)) way (PositionMap positions)) = newTransit where
+  newTransit = Transit c way (PositionMap newPositions)
+  newPositions = case maybeNewPositions of
+                   Just p -> p
+                   Nothing -> positions
+  -- yield the previous position if there is a problem.
+  maybeNewPositions = do
+    -- todo: use Map.update here.
+    (Position _ ip) <- Map.lookup b positions
+    newIP <- incrementPointIndex way ip
+    return $ Map.insert b (Position b newIP) positions 
 
 -- Setup some fake data to render
 
@@ -249,5 +269,5 @@ fakeGameState3 = game where
   game = updateGameStatePositions c
   fakeWay3 = Way [PointPath points] where
     points = map (\(x, y) -> IndexedPoint x y) 
-      [(x, Point (fromIntegral x) (20 * (sin (fromIntegral x)))) | x <- [0, 10..1000]]
+      [(x, Point (fromIntegral x) (200 * (sin ((fromIntegral x) / 50.0)))) | x <- [0, 1..500]]
 
