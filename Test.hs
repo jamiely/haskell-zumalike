@@ -89,9 +89,9 @@ testUpdateTransitPositions = TestCase $ assertEqual "updateTransitPositions" ex 
   ex = Transit exChain exWay exPositions
   act = updateTransitPositions testTransit
 
-testFakeGame :: HUnit.Test
-testFakeGame = TestCase $ assertEqual "fakeGame" ex act where
-    ex = Game (SequentialGenerator 6 2.0) [Transit (Chain [Ball 1 2.0 Red,Ball 2
+testFakeGameState :: HUnit.Test
+testFakeGameState = TestCase $ assertEqual "fakeGameState" ex act where
+    ex = GameState (SequentialGenerator 6 2.0) [Transit (Chain [Ball 1 2.0 Red,Ball 2
       2.0 Red,Ball 3 2.0 Red,Ball 4 2.0 Red,Ball 5 2.0 Red]) (Way [PointPath [IndexedPoint 0
       (Point 0.0 10.0),IndexedPoint 5 (Point 5.0 10.0),IndexedPoint 10 (Point
       10.0 10.0),IndexedPoint 15 (Point 15.0 10.0),IndexedPoint 20 (Point 20.0
@@ -102,7 +102,7 @@ testFakeGame = TestCase $ assertEqual "fakeGame" ex act where
       (IndexedPoint 10 (Point 10.0 10.0))),(Ball 4 2.0 Red,Position (Ball 4 2.0 Red)
       (IndexedPoint 15 (Point 15.0 10.0))),(Ball 5 2.0 Red,Position (Ball 5 2.0 Red)
       (IndexedPoint 20 (Point 20.0 10.0)))]))]
-    act = fakeGame
+    act = fakeGameState
 
 -- Some Tests
 tests = TestList [ 
@@ -112,7 +112,7 @@ tests = TestList [
     testUpdatePositionsUsingPrev,
     testUpdatePositionsUsingPrev2,
     testUpdateTransitPositions,
-    testFakeGame
+    testFakeGameState
   ] where
 
 main :: IO ()

@@ -15,16 +15,16 @@ main = do
     (InWindow "Tic-tac-toe" size position)
     azure
     10
-    (fakeGame3, Play)
-    drawGame
+    (fakeGameState3, Play)
+    drawGameState
     handleInput
-    stepGame where
+    stepGameState where
       size = (1400, 800)
       position = (0, 0)
 
-drawGame :: (Game, Play) -> IO Picture
-{-drawGame (game, _) = return (grid <> plays)-}
-drawGame (game, _) = return (grid <> translate (-200) (200) gamePicture) where
+drawGameState :: (GameState, Play) -> IO Picture
+{-drawGameState (game, _) = return (grid <> plays)-}
+drawGameState (game, _) = return (grid <> translate (-200) (200) gamePicture) where
   grid = 
     color black (line [ (-100, -300), (-100,  300) ]) <>
     color black (line [ ( 100, -300), ( 100,  300) ]) <>
@@ -32,7 +32,7 @@ drawGame (game, _) = return (grid <> translate (-200) (200) gamePicture) where
     color black (line [ (-300, -100), ( 300, -100) ]) <>
     color blue (circle 10)
   
-  (Game _ transits) = game
+  (GameState _ transits) = game
   gamePicture = foldr (<>) Blank $ map drawTransit transits
 
   {-plays = mconcat-}
@@ -61,22 +61,22 @@ ballToGlossColor Yellow = yellow
 ballToGlossColor Magenta = magenta
 ballToGlossColor Cyan = cyan
 
-handleInput :: Event -> (Game, Play) -> IO (Game, Play)
+handleInput :: Event -> (GameState, Play) -> IO (GameState, Play)
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y))
   (game, p) = do
     putStrLn $ show game
-    let newGame = game -- TODO: add ball to game in first transit
-    return (newGame, p)
+    let newGameState = game -- TODO: add ball to game in first transit
+    return (newGameState, p)
     {-let snap = (+1) . min 1 . max (-1) . fromIntegral . floor . (/ 100) .-}
            {-(+ 50)-}
     {-(gridX, gridY) = (snap x, snap y)-}
     {-case (game !! gridX) !! gridY of-}
       {-Just _ -> return (game, X)-}
       {-Nothing -> do-}
-        {-let newGame = (ix gridX . ix gridY .~ (Just X)) game-}
-        {-return (newGame, O)-}
+        {-let newGameState = (ix gridX . ix gridY .~ (Just X)) game-}
+        {-return (newGameState, O)-}
 handleInput _ a = return a
 
-stepGame :: Float -> (Game, Play) -> IO (Game, Play)
-stepGame _ = return
+stepGameState :: Float -> (GameState, Play) -> IO (GameState, Play)
+stepGameState _ = return
 
