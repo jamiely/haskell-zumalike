@@ -19,7 +19,7 @@ main = do
     drawGameState
     handleInput
     stepGameState where
-      size = (1400, 800)
+      size = (1200, 800)
       position = (0, 0)
 
 drawGameState :: (GameState, Play) -> IO Picture
@@ -34,16 +34,6 @@ drawGameState (game, _) = return (grid <> translate (-200) (200) gamePicture) wh
   
   (GameState _ transits) = game
   gamePicture = foldr (<>) Blank $ map drawTransit transits
-
-  {-plays = mconcat-}
-    {-[ translate (fromIntegral $ (x - 1) * 200)-}
-                {-(fromIntegral $ (y - 1) * 200) $-}
-        {-case p of-}
-          {-Play -> color white (thickCircle 1 50)-}
-    {-| x <- [0..2]-}
-    {-, y <- [0..2]-}
-    {-, Just p <- [ (game !! x) !! y ]-}
-    {-]-}
 
 drawTransit :: Transit -> Picture
 drawTransit (Transit chain way (PositionMap positionMap)) = 
@@ -75,6 +65,15 @@ handleInput (EventKey (MouseButton LeftButton) Up _ (x, y))
       {-Nothing -> do-}
         {-let newGameState = (ix gridX . ix gridY .~ (Just X)) game-}
         {-return (newGameState, O)-}
+
+handleInput (EventKey (Char 'a') Up _ _) (game, p) = do
+  putStrLn "Add a ball"
+  return (newGameState2, p) where
+  (newGameState1, _) = addBallToGameStateInFirstTransit game
+  newGameState2 = updateGameStatePositions newGameState1
+  addBallToGameStateInFirstTransit g@(GameState _ (t:ts)) = addNewBallToGameStateInTransit g t
+  addBallToGameStateInFirstTransit g = (g, Nothing)
+  
 handleInput _ a = return a
 
 stepGameState :: Float -> (GameState, Play) -> IO (GameState, Play)

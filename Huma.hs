@@ -12,6 +12,7 @@ import qualified Data.Sequence as Seq
 type Width = Float
 type BallId = Int
 type Index = Int
+type Tick = Int
 data BallColor = Red | Green | Blue | Yellow | Cyan | Magenta deriving (Eq, Show, Ord)
 
 colors :: Seq BallColor
@@ -37,6 +38,9 @@ data Transit = Transit Chain Way Positions deriving (Eq, Show)
 
 data BallGenerator = SequentialGenerator Index Width deriving (Show, Eq)
 data GameState = GameState BallGenerator [Transit] deriving (Show, Eq)
+type GameTick = (GameState, Tick)
+-- list of game ticks, in order of descending time
+data Game = Game [GameTick]
 
 generateBall :: BallGenerator -> (Ball, BallGenerator)
 generateBall (SequentialGenerator i w) = (ball, newGen) where
@@ -135,6 +139,14 @@ nonCollidingPositionAlongPoints points noCollide@(Position _ nPt@(IndexedPoint n
     pred :: IndexedPoint -> Bool
     pred pt@(IndexedPoint index _) = collides pt || nInd >= index
 
+incrementPointIndex :: Way -> IndexedPoint -> Maybe IndexedPoint
+incrementPointIndex way (IndexedPoint index pt) = wayPointGivenIndex way $ index + 1
+
+wayPointGivenIndex :: Way -> Index -> Maybe IndexedPoint
+wayPointGivenIndex (Way ((PointPath points):ps)) i = if (length points) < i 
+                                                       then Just (points !! i)
+                                                       else Nothing
+wayPointGivenIndex _ _ = Nothing
 
 newBall :: GameState -> (Ball, GameState)
 newBall (GameState gen transits) = (ball, game) where 
@@ -174,6 +186,11 @@ addBallToGameStateInTransit (GameState gen transits) transit ball = (game, maybe
   update t = if transit == t
                then (addBallToTransit ball t, True)
                else (t, False) 
+
+addNewBallToGameStateInTransit :: GameState -> Transit -> (GameState, Maybe Transit)
+addNewBallToGameStateInTransit gameState transit = finalGameState where
+  (ball, newGameState) = newBall gameState
+  finalGameState = addBallToGameStateInTransit newGameState transit ball
 
 -- Setup some fake data to render
 
@@ -226,7 +243,7 @@ fakeGameState3 = game where
                              Just t -> addBallToGameStateInTransit game t ball
                              Nothing -> (game, mt)
   (c, _) = foldr addBall (b1, Just transit) $ reverse balls
-  (balls, b1) = foldl fun ([], b) [1..100]
+  (balls, b1) = foldl fun ([], b) [1..5]
   fun (balls, g) _ = case newBall g of
                        (b, g') -> (b:balls, g') 
   game = updateGameStatePositions c
