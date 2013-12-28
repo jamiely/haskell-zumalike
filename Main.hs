@@ -15,11 +15,11 @@ main = do
     (InWindow "Tic-tac-toe" size position)
     azure
     10
-    (fakeGame2, Play)
+    (fakeGame3, Play)
     drawGame
     handleInput
     stepGame where
-      size = (500, 500)
+      size = (1400, 800)
       position = (0, 0)
 
 drawGame :: (Game, Play) -> IO Picture
@@ -64,6 +64,7 @@ ballToGlossColor Cyan = cyan
 handleInput :: Event -> (Game, Play) -> IO (Game, Play)
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y))
   (game, p) = do
+    putStrLn $ show game
     let newGame = game -- TODO: add ball to game in first transit
     return (newGame, p)
     {-let snap = (+1) . min 1 . max (-1) . fromIntegral . floor . (/ 100) .-}

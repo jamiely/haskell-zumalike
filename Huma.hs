@@ -218,5 +218,19 @@ fakeGame2 = game where
     points = map (\(x, y) -> IndexedPoint x y) 
       [(x, Point (fromIntegral x) 10) | x <- [0, 5 .. 500]]
 
-
+fakeGame3 :: Game
+fakeGame3 = game where
+  transit = emptyTransit fakeWay3
+  b@(Game gen bTransits) = addTransitToGame (Game (SequentialGenerator 1 24) []) transit 
+  addBall ball (game, mt) = case mt of
+                             Just t -> addBallToGameInTransit game t ball
+                             Nothing -> (game, mt)
+  (c, _) = foldr addBall (b1, Just transit) $ reverse balls
+  (balls, b1) = foldl fun ([], b) [1..100]
+  fun (balls, g) _ = case newBall g of
+                       (b, g') -> (b:balls, g') 
+  game = updateGamePositions c
+  fakeWay3 = Way [PointPath points] where
+    points = map (\(x, y) -> IndexedPoint x y) 
+      [(x, Point (fromIntegral x) (20 * (sin (fromIntegral x)))) | x <- [0, 10..1000]]
 
