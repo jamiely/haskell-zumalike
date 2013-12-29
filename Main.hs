@@ -32,7 +32,7 @@ drawGameState (game, _) = return (grid <> translate (-200) (200) gamePicture) wh
     color black (line [ (-300, -100), ( 300, -100) ]) <>
     color blue (circle 10)
   
-  (GameState _ transits) = game
+  (GameState _ transits _ _) = game
   gamePicture = foldr (<>) Blank $ map drawTransit transits
 
 drawTransit :: Transit -> Picture
@@ -62,7 +62,7 @@ handleInput (EventKey (Char 'a') Up _ _) (game, p) = do
   return (newGameState2, p) where
   (newGameState1, _) = addBallToGameStateInFirstTransit game
   newGameState2 = updateGameStatePositions newGameState1
-  addBallToGameStateInFirstTransit g@(GameState _ (t:ts)) = addNewBallToGameStateInTransit g t
+  addBallToGameStateInFirstTransit g@(GameState _ (t:ts) _ _) = addNewBallToGameStateInTransit g t
   addBallToGameStateInFirstTransit g = (g, Nothing)
 handleInput (EventKey (Char '?') Up _ _) (game, p) = do
   putStrLn $ show game
