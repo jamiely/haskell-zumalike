@@ -229,7 +229,7 @@ updateFreeBalls :: Float -> GameState -> GameState
 updateFreeBalls travelTime (GameState gen transits free queued) = newState where
   newState = GameState gen transits newFree queued 
   -- we need to update these relative to some travel time
-  speed = 10
+  speed = 5
   distance = travelTime * speed
   newFree = map updateFree free
   -- assuming angle is correct
