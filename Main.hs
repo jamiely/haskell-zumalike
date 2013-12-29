@@ -4,6 +4,8 @@ import Huma
 import Control.Applicative
 import Data.Monoid ((<>), mconcat, mempty)
 import Graphics.Gloss.Interface.IO.Game
+import qualified Graphics.Gloss.Interface.IO.Game as GlossGame
+import qualified Graphics.Gloss.Data.Picture as Pic
 import Control.Monad
 import qualified Data.Map as Map
 
@@ -24,23 +26,29 @@ main = do
 
 drawGameState :: (GameState, Play) -> IO Picture
 {-drawGameState (game, _) = return (grid <> plays)-}
-drawGameState (game, _) = return (grid <> translate (-200) (200) gamePicture) where
-  grid = 
-    color black (line [ (-100, -300), (-100,  300) ]) <>
-    color black (line [ ( 100, -300), ( 100,  300) ]) <>
-    color black (line [ (-300,  100), ( 300,  100) ]) <>
-    color black (line [ (-300, -100), ( 300, -100) ]) <>
-    color blue (circle 10)
-  
-  (GameState _ transits _ _) = game
-  gamePicture = foldr (<>) Blank $ map drawTransit transits
+drawGameState (game, _) = return $ origin <> gamePicture <> shooter where
+  (GameState _ transits freeBalls _) = game
+  gamePicture = translate (-200) 200 $ mconcat $ map drawTransit transits
+  origin = color black $ circle 10
+  shooter = mconcat $ map drawFreeBall freeBalls 
+
+convertPoint :: Huma.Point -> Pic.Point
+convertPoint (Huma.Point x y) = (x, y)
+
+drawFreeBall :: FreeBall -> Picture
+drawFreeBall (ball, location, origin, _) = picBall <> path where
+  picBall = drawBallAt ball location
+  path = color red $ Line $ map convertPoint [origin, location]
 
 drawTransit :: Transit -> Picture
 drawTransit (Transit chain way (PositionMap positionMap)) = 
   foldr (<>) Blank $ map drawPosition $ map snd $ Map.toList positionMap
 
 drawPosition :: Position -> Picture
-drawPosition (Position (Ball _ width ballColor) (IndexedPoint _ (Point x y))) = 
+drawPosition (Position ball (IndexedPoint _ pt)) = drawBallAt ball pt
+
+drawBallAt :: Ball -> Huma.Point -> Picture
+drawBallAt (Ball _ width ballColor) (Point x y) = 
   translate x y $ color (ballToGlossColor ballColor) $ circle width
 
 ballToGlossColor :: BallColor -> Color
@@ -64,8 +72,8 @@ handleInput (EventKey (Char 'a') Up _ _) (game, p) = do
   newGameState2 = updateGameStatePositions newGameState1
   addBallToGameStateInFirstTransit g@(GameState _ (t:ts) _ _) = addNewBallToGameStateInTransit g t
   addBallToGameStateInFirstTransit g = (g, Nothing)
-handleInput (EventKey (Char '?') Up _ _) (game, p) = do
-  putStrLn $ show game
+handleInput (EventKey (Char '?') Up _ _) (game@(GameState _ _ free _), p) = do
+  putStrLn $ show free
   return (game, p)
 
 handleInput (EventKey (Char 'n') Up _ _) (game, p) = do
@@ -75,5 +83,7 @@ handleInput (EventKey (Char 'n') Up _ _) (game, p) = do
 handleInput _ a = return a
 
 stepGameState :: Float -> (GameState, Play) -> IO (GameState, Play)
-stepGameState f (game, p) = 
-  return (moveFirstBallForwardInGameStateAndUpdate game, p)
+stepGameState f (game, p) = return (newGame, p) where
+  moveBalls = moveFirstBallForwardInGameStateAndUpdate game
+  newGame = updateFreeBalls f moveBalls
+

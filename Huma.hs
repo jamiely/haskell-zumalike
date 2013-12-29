@@ -22,6 +22,11 @@ colorMod :: Int -> BallColor
 colorMod i = Seq.index colors $ i `rem` (Seq.length colors)
 
 data Point = Point Float Float deriving (Eq, Show)
+addPoints :: Point -> Point -> Point
+addPoints (Point x1 y1) (Point x2 y2) = Point (x1 + x2) (y1 + y2)
+pointFromPair :: (Float, Float) -> Point
+pointFromPair (x, y) = Point x y
+
 data IndexedPoint = IndexedPoint Index Point deriving (Eq, Show)
 
 -- a regular ball in Zuma
@@ -37,8 +42,9 @@ data Positions = PositionMap (Map Ball Position) deriving (Eq, Show)
 data Transit = Transit Chain Way Positions deriving (Eq, Show)
 
 data BallGenerator = SequentialGenerator Index Width deriving (Show, Eq)
+type Angle = Float
 -- represents balls flying over the screen
-type FreeBall = (Ball, Point)
+type FreeBall = (Ball, Point, Point, Angle)
 type BallQueue = Seq Ball
 data GameState = GameState BallGenerator [Transit] 
   [FreeBall] BallQueue
@@ -218,6 +224,19 @@ moveFirstBallForwardInTransit (Transit c@(Chain (b:bs)) way (PositionMap positio
     newIP <- incrementPointIndex way ip
     return $ Map.insert b (Position b newIP) positions 
 
+
+updateFreeBalls :: Float -> GameState -> GameState
+updateFreeBalls travelTime (GameState gen transits free queued) = newState where
+  newState = GameState gen transits newFree queued 
+  -- we need to update these relative to some travel time
+  speed = 10
+  distance = travelTime * speed
+  newFree = map updateFree free
+  -- assuming angle is correct
+  speedParts angle = pointFromPair (speed * cos angle, speed * sin angle)
+  updateFree (ball, loc, orig, angle) = 
+    (ball, addPoints loc (speedParts angle), orig, angle)
+
 -- Setup some fake data to render
 
 fakeBalls :: [Ball]
@@ -249,14 +268,26 @@ fakeGameState = game where
 fakeGameState3 :: GameState
 fakeGameState3 = game where
   transit = emptyTransit fakeWay3
-  a = GameState (SequentialGenerator 1 24) [] [] $ Seq.fromList queued
+  -- free balls
+  freeBalls = map genFreeBall $ zip free [1..3]
+
+  genFreeBall (ball, seedi) = let
+    seed = fromIntegral seedi
+    angle = 2 * pi / seed
+    speed = 25 * seed
+    x = speed * cos angle
+    y = speed * sin angle
+    in (ball, Point x y, Point 0 0, angle)
+
+  a = GameState (SequentialGenerator 1 24) [] freeBalls $ Seq.fromList queued
   b@(GameState gen bTransits _ _) = addTransitToGameState a transit 
   addBall ball (game, mt) = case mt of
                              Just t -> addBallToGameStateInTransit game t ball
                              Nothing -> (game, mt)
   (c, _) = foldr addBall (b1, Just transit) $ reverse balls
-  (balls, queued) = splitAt 7 allBalls
-  (allBalls, b1) = foldl fun ([], b) [1..10]
+  (balls, otherBalls) = splitAt 6 allBalls
+  (free, queued) = splitAt 3 otherBalls
+  (allBalls, b1) = foldl fun ([], b) [1..12]
   fun (balls, g) _ = case newBall g of
                        (b, g') -> (b:balls, g') 
   game = updateGameStatePositions c
