@@ -18,7 +18,7 @@ main = do
     (InWindow "Tic-tac-toe" size position)
     azure
     10
-    (fakeGameState3, UI $ Shooter (0, 0) 0)
+    (fakeGameState3, UI $ Shooter (0, 0) (pi/2))
     drawGameState
     handleInput
     stepGameState where
@@ -27,11 +27,16 @@ main = do
 
 drawGameState :: (GameState, UI) -> IO Picture
 {-drawGameState (game, _) = return (grid <> plays)-}
-drawGameState (game, ui) = return $ origin <> gamePicture <> shooter <> drawUI ui where
+drawGameState (game, ui) = do
+  putStrLn $ "@@Collisions: " ++ show gameCollisions ++ "\n@@Free:" ++ show free
+  return $ mconcat [origin, gamePicture, shooter, drawUI ui, collisions] where
   (GameState _ transits freeBalls _) = game
-  gamePicture = translate (-200) 200 $ mconcat $ map drawTransit transits
+  gamePicture = mconcat $ map drawTransit transits
   origin = color black $ circle 10
   shooter = mconcat $ map drawFreeBall freeBalls 
+  gameCollisions = gameStateCollisions game
+  collisions = mconcat $ map drawCollision gameCollisions
+  (GameState _ _ free _) = game
 
 drawUI :: UI -> Picture
 drawUI (UI (Shooter origin angle)) = rotate (-(radiansToDegress angle)) $ drawPointer origin
@@ -53,6 +58,10 @@ convertPoint (Huma.Point x y) = (x, y)
 
 fromPoint :: Pic.Point -> Huma.Point
 fromPoint (x, y) = Huma.Point x y
+
+drawCollision :: Collision -> Picture
+drawCollision (Collision (_, pt1) (Position _ (IndexedPoint _ pt2))) =  
+  color black $ Line $ map convertPoint [pt1, pt2]
 
 drawFreeBall :: FreeBall -> Picture
 drawFreeBall (ball, location, origin, _) = picBall <> path where

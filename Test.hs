@@ -8,6 +8,7 @@ import Test.Framework.Providers.QuickCheck2
 import Test.HUnit
 import qualified Test.HUnit as HUnit
 import qualified Data.Map as Map
+import qualified Data.Sequence as Seq
 import Test.QuickCheck
 import Huma
 
@@ -91,7 +92,8 @@ testUpdateTransitPositions = TestCase $ assertEqual "updateTransitPositions" ex 
 
 testFakeGameState :: HUnit.Test
 testFakeGameState = TestCase $ assertEqual "fakeGameState" ex act where
-    ex = GameState (SequentialGenerator 6 2.0) [Transit (Chain [Ball 1 2.0 Green,Ball 2 2.0 Blue,Ball 3 2.0 Yellow,Ball 4 2.0 Cyan,Ball 5 2.0 Magenta]) (Way [PointPath [IndexedPoint 0 (Point 0.0 10.0),IndexedPoint 5 (Point 5.0 10.0),IndexedPoint 10 (Point 10.0 10.0),IndexedPoint 15 (Point 15.0 10.0),IndexedPoint 20 (Point 20.0 10.0),IndexedPoint 25 (Point 25.0 10.0),IndexedPoint 30 (Point 30.0 10.0)]]) (PositionMap (Map.fromList [(Ball 1 2.0 Green,Position (Ball 1 2.0 Green) (IndexedPoint 0 (Point 0.0 10.0))),(Ball 2 2.0 Blue,Position (Ball 2 2.0 Blue) (IndexedPoint 5 (Point 5.0 10.0))),(Ball 3 2.0 Yellow,Position (Ball 3 2.0 Yellow) (IndexedPoint 10 (Point 10.0 10.0))),(Ball 4 2.0 Cyan,Position (Ball 4 2.0 Cyan) (IndexedPoint 15 (Point 15.0 10.0))),(Ball 5 2.0 Magenta,Position (Ball 5 2.0 Magenta) (IndexedPoint 20 (Point 20.0 10.0)))]))]
+    ex = GameState (SequentialGenerator 6 2.0) transits [] Seq.empty
+    transits = [Transit (Chain [Ball 1 2.0 Green,Ball 2 2.0 Blue,Ball 3 2.0 Yellow,Ball 4 2.0 Cyan,Ball 5 2.0 Magenta]) (Way [PointPath [IndexedPoint 0 (Point 0.0 10.0),IndexedPoint 5 (Point 5.0 10.0),IndexedPoint 10 (Point 10.0 10.0),IndexedPoint 15 (Point 15.0 10.0),IndexedPoint 20 (Point 20.0 10.0),IndexedPoint 25 (Point 25.0 10.0),IndexedPoint 30 (Point 30.0 10.0)]]) (PositionMap (Map.fromList [(Ball 1 2.0 Green,Position (Ball 1 2.0 Green) (IndexedPoint 0 (Point 0.0 10.0))),(Ball 2 2.0 Blue,Position (Ball 2 2.0 Blue) (IndexedPoint 5 (Point 5.0 10.0))),(Ball 3 2.0 Yellow,Position (Ball 3 2.0 Yellow) (IndexedPoint 10 (Point 10.0 10.0))),(Ball 4 2.0 Cyan,Position (Ball 4 2.0 Cyan) (IndexedPoint 15 (Point 15.0 10.0))),(Ball 5 2.0 Magenta,Position (Ball 5 2.0 Magenta) (IndexedPoint 20 (Point 20.0 10.0)))]))]
     act = fakeGameState
 
 testMoveBallUp :: HUnit.Test
@@ -121,6 +123,16 @@ testMoveBallUp = TestList [
                                     (ball2, Position ball2 ip2),
                                     (ball3, Position ball3 ip3)]
   act1 = moveFirstBallForwardInTransit baseTransit
+
+testCollisions :: HUnit.Test
+testCollisions = TestCase $ assertEqual "collisions" ex act where
+  ballA = Ball 1 2.0 Red
+  ballB = Ball 2 2.0 Red
+  ballPtA = (ballA, Point 0 0)
+  pos = Position ballB (IndexedPoint 0 (Point 3.5 0))
+  ex = [Collision ballPtA pos]
+  act = collisions ballPtA positions
+  positions = PositionMap $ Map.fromList [(ballB, pos)]
 
 -- Some Tests
 tests = TestList [ 

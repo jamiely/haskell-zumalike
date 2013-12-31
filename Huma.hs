@@ -50,9 +50,14 @@ data GameState = GameState BallGenerator [Transit]
   [FreeBall] BallQueue
   deriving (Show, Eq)
 type GameTick = (GameState, Tick)
+type BallPt = (Ball, Point)
+data Collision = Collision BallPt Position deriving (Eq, Show)
 
 -- list of game ticks, in order of descending time
 data Game = Game [GameTick]
+
+ballPtFromPosition :: Position -> BallPt
+ballPtFromPosition (Position ball (IndexedPoint _ pt)) = (ball, pt)
 
 generateBall :: BallGenerator -> (Ball, BallGenerator)
 generateBall (SequentialGenerator i w) = (ball, newGen) where
@@ -120,9 +125,14 @@ getPosition :: Positions -> Ball -> Maybe Position
 getPosition (PositionMap map) ball = Map.lookup ball map where 
 
 isColliding :: Position -> Position -> Bool
-isColliding (Position (Ball _ w1 _) (IndexedPoint _ pt1)) 
-  (Position (Ball _ w2 _) (IndexedPoint _ pt2)) =
-    (euclideanDistance pt1 pt2) < (w1 + w2)
+isColliding (Position b1 (IndexedPoint _ pt1)) 
+  (Position b2 (IndexedPoint _ pt2)) = ballPtsColliding (b1, pt1) (b2, pt2)
+
+ballPtsColliding :: BallPt -> BallPt -> Bool
+ballPtsColliding (b1, p1) (b2, p2) = dist < radii where
+  dist = euclideanDistance p1 p2
+  radii = foldr1 (+) $ map radius [b1, b2]
+  radius (Ball _ w _) = w
 
 -- Returns a new ball position updated along the way so it is not colliding
 -- with the first ball position.
@@ -237,6 +247,25 @@ updateFreeBalls travelTime (GameState gen transits free queued) = newState where
   updateFree (ball, loc, orig, angle) = 
     (ball, addPoints loc (speedParts angle), orig, angle)
 
+transitPositions :: Transit -> Positions
+transitPositions (Transit _ _ p) = p
+
+gameStatePositions :: GameState -> [Positions]
+gameStatePositions (GameState _ transits _ _) = map transitPositions transits
+
+gameStateCollisions :: GameState -> [Collision]
+gameStateCollisions gs@(GameState _ _ free _) = concat $ map calcCollisions free where
+  calcCollisions :: FreeBall -> [Collision]
+  calcCollisions (ball, pt, _, _) = concat 
+    $ map (collisions (ball, pt)) 
+    $ gameStatePositions gs
+
+-- Returns all collisions for a point
+collisions :: BallPt -> Positions -> [Collision]
+collisions ballpt (PositionMap positions) = map (Collision ballpt) 
+  $ filter ((ballPtsColliding ballpt) . ballPtFromPosition)
+  $ Map.elems positions
+
 -- Setup some fake data to render
 
 fakeBalls :: [Ball]
@@ -269,7 +298,7 @@ fakeGameState3 :: GameState
 fakeGameState3 = game where
   transit = emptyTransit fakeWay3
   -- free balls
-  freeBalls = map genFreeBall $ zip free [1..3]
+  freeBalls = map genFreeBall $ zip free [1,4..16]
 
   genFreeBall (ball, seedi) = let
     seed = fromIntegral seedi
@@ -293,5 +322,5 @@ fakeGameState3 = game where
   game = updateGameStatePositions c
   fakeWay3 = Way [PointPath points] where
     points = map (\(x, y) -> IndexedPoint x y) 
-      [(x, Point (fromIntegral x) (200 * (sin ((fromIntegral x) / 50.0)))) | x <- [0, 1..500]]
+      [(x, Point (2 * (fromIntegral x)-200) (200 * (sin ((fromIntegral x) / 50.0)))) | x <- [0, 1..500]]
 
