@@ -34,12 +34,14 @@ drawGameState (game, ui) = do
   gamePicture = mconcat $ map drawTransit transits
   origin = color black $ circle 10
   shooter = mconcat $ map drawFreeBall freeBalls 
-  gameCollisions = gameStateCollisions game
+  gameCollisions = collisionsByDistance $ gameStateCollisions game
   angles :: [Angle]
   angles = map (collisionAngle game) gameCollisions
   collisionsWithAngles :: [(Collision, Angle)]
   collisionsWithAngles = zip gameCollisions angles
-  collisions = mconcat $ map drawCollision gameCollisions
+  collisions = case gameCollisions of
+                 (a:as) -> drawCollision a
+                 _ -> Blank
   colAngles = mconcat $ map drawCollisionAngles collisionsWithAngles
   (GameState _ _ free _) = game
 
@@ -65,13 +67,13 @@ fromPoint :: Pic.Point -> Huma.Point
 fromPoint (x, y) = Huma.Point x y
 
 drawCollisionAngles :: (Collision, Angle) -> Picture
-drawCollisionAngles ((Collision (_, (Huma.Point x y), _, _) _), angle) = t where
+drawCollisionAngles ((Collision (_, (Huma.Point x y), _, _) _ _), angle) = t where
   t = Pic.Scale 0.5 0.5 moved
   moved = Translate x y text 
   text = Text $ show $ radiansToDegress angle
 
 drawCollision :: Collision -> Picture
-drawCollision (Collision (_, pt1, _, _) (Position _ (IndexedPoint _ pt2))) =  
+drawCollision (Collision (_, pt1, _, _) (Position _ (IndexedPoint _ pt2)) _) =  
   color black $ Pic.Line $ map convertPoint [pt1, pt2]
 
 drawFreeBall :: FreeBall -> Picture
@@ -152,7 +154,11 @@ radiansToDegress :: Huma.Angle -> Huma.Angle
 radiansToDegress angle = 360/2/pi * angle
 
 stepGameState :: Float -> (GameState, UI) -> IO (GameState, UI)
-stepGameState f (game, p) = return (newGame, p) where
+stepGameState f (game, p) = return (newGameAfterCollision, p) where
   moveBalls = moveFirstBallForwardInGameStateAndUpdate game
+  gameCollisions = collisionsByDistance $ gameStateCollisions game
   newGame = updateFreeBalls f moveBalls
+  newGameAfterCollision = case gameCollisions of
+                            (c:cs) -> processCollision newGame c
+                            _      -> newGame
 

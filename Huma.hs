@@ -6,7 +6,9 @@ import Data.Generics.Aliases(orElse)
 import Control.Monad
 import System.Random (StdGen)
 import Data.List (find, elemIndex)
+import Data.List as List
 import Data.Sequence (Seq)
+import Data.Ord (comparing)
 import qualified Data.Sequence as Seq
 import qualified Data.Maybe as Maybe
 
@@ -52,7 +54,8 @@ data GameState = GameState BallGenerator [Transit]
   deriving (Show, Eq)
 type GameTick = (GameState, Tick)
 type BallPt = (Ball, Point)
-data Collision = Collision FreeBall Position deriving (Eq, Show)
+type Distance = Float
+data Collision = Collision FreeBall Position Distance deriving (Eq, Show)
 
 -- list of game ticks, in order of descending time
 data Game = Game [GameTick]
@@ -65,7 +68,7 @@ generateBall (SequentialGenerator i w) = (ball, newGen) where
   ball = Ball i w $ colorMod i
   newGen = SequentialGenerator (i + 1) w
 
-euclideanDistance :: Point -> Point -> Float
+euclideanDistance :: Point -> Point -> Distance
 euclideanDistance (Point x1 y1) (Point x2 y2) = 
   sqrt $ (x1 - x2)**2 + (y1 - y2)**2
 
@@ -130,7 +133,10 @@ isColliding (Position b1 (IndexedPoint _ pt1))
   (Position b2 (IndexedPoint _ pt2)) = ballPtsColliding (b1, pt1) (b2, pt2)
 
 ballPtsColliding :: BallPt -> BallPt -> Bool
-ballPtsColliding (b1, p1) (b2, p2) = dist < radii where
+ballPtsColliding a b = fst $ ballPtsCollidingWithDist a b
+
+ballPtsCollidingWithDist :: BallPt -> BallPt -> (Bool, Distance)
+ballPtsCollidingWithDist (b1, p1) (b2, p2) = (dist < radii, dist) where
   dist = euclideanDistance p1 p2
   radii = foldr1 (+) $ map radius [b1, b2]
   radius (Ball _ w _) = w
@@ -262,11 +268,15 @@ gameStateCollisions gs@(GameState _ _ free _) = concat $ map calcCollisions free
 
 -- Returns all collisions for a point
 collisions :: FreeBall -> Positions -> [Collision]
-collisions freeBall (PositionMap positions) = map (Collision freeBall) 
-  $ filter ((ballPtsColliding ballpt) . ballPtFromPosition)
-  $ Map.elems positions where
+collisions freeBall (PositionMap positionsMap) = 
+  map colFun
+  $ filter (fst . snd)
+  $ map mapFun
+  $ Map.elems positionsMap where
+  colFun (pos, (_, dist)) = Collision freeBall pos dist
   (ball, pt, _, _) = freeBall
   ballpt = (ball, pt)
+  mapFun pos = (pos, ballPtsCollidingWithDist ballpt $ ballPtFromPosition pos)
 
 -- Setup some fake data to render
 
@@ -320,7 +330,7 @@ positionPt :: Position -> Point
 positionPt (Position _ (IndexedPoint _ p)) = p
 
 collisionAngle :: GameState -> Collision -> Angle 
-collisionAngle gs (Collision freeBall position) = angle where
+collisionAngle gs (Collision freeBall position _) = angle where
   angle = angleBetweenVectors v1 v2
   v1 = vectorFromLine $ freeBallToLine freeBall
   v2 = vectorFromLine $ Line nextPt pt
@@ -328,6 +338,12 @@ collisionAngle gs (Collision freeBall position) = angle where
   nextPt = case nextPointFromPosition gs position of
              Just (IndexedPoint _ p) -> p
              Nothing -> Point 0 0
+
+collisionDistance :: Collision -> Distance
+collisionDistance (Collision _ _ dist) = dist
+
+collisionsByDistance :: [Collision] -> [Collision]
+collisionsByDistance = List.sortBy $ comparing collisionDistance
 
 nextPointFromPosition :: GameState -> Position -> Maybe IndexedPoint
 nextPointFromPosition (GameState _ transits _ _) (Position ball ip) = do
@@ -353,6 +369,54 @@ ballPositionInPositions (PositionMap pos) = flip Map.lookup $ pos
 dotProduct :: Line -> Float
 dotProduct (Line (Point x1 y1) (Point x2 y2)) = x1 * x2 + y1 * y2
 vectorMagnitude (Point x y) = sqrt $ x ** 2 + y ** 2
+
+transitContainingBall :: GameState -> Ball -> Maybe Transit
+transitContainingBall (GameState _ ts _ _) ball = find fun ts where
+  fun (Transit (Chain balls) _ _) = elem ball balls
+
+processCollision :: GameState -> Collision -> GameState
+-- when a collision happens, the ball should either be inserted in front of,
+-- or behind the ball it collided with.
+processCollision gs col@(Collision freeBall@(newBall, _, _, _) position _) = newGs where
+  newGs = updateGameStatePositions $ GameState gen newTransits newFree queued
+  angle = collisionAngle gs col
+  before = angle < pi/2.0
+  -- modify the chain
+  oldTransit@(Transit oldChain way oldPositions) =
+    case transitContainingBall gs existingBall of
+      Just t -> t
+      Nothing -> head transits
+    
+  newTransit = Transit newChain way newPositions 
+  (GameState gen transits free queued) = gs
+  newFree = foldr (\f@(ball, _, _, _) fs -> if ball == newBall 
+                                            then fs
+                                            else f:fs) [] free 
+  newTransits = map (\t -> if t == oldTransit 
+                             then newTransit
+                             else t) transits
+  (Position existingBall existingIp) = position
+  (Chain oldBalls) = oldChain 
+  newChain = Chain $ reverse $ 
+    foldr (\b bs -> if b == existingBall
+                       then if before
+                              then newBall : b : bs
+                              else b : newBall : bs
+                       else b : bs)
+          [] $ reverse oldBalls
+  (PositionMap mapOldPos) = oldPositions 
+  newPositions = case maybeNewPos of 
+                   Just newPosition -> PositionMap $ Map.insert newBall newPosition mapOldPos 
+                   Nothing -> oldPositions
+
+  -- the indexed point for the new ball
+  maybeNewIP = if before
+                 then Just existingIp
+                 else incrementPointIndex way existingIp
+  -- the position for the new ball
+  maybeNewPos = do
+    newIp <- maybeNewIP
+    return $ Position newBall newIp
 
 fakeGameState3 :: GameState
 fakeGameState3 = game where
