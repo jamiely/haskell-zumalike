@@ -43,6 +43,7 @@ data Position = Position Ball IndexedPoint deriving (Eq, Show)
 data Positions = PositionMap (Map Ball Position) deriving (Eq, Show)
 -- A Transit describes a chain on a certain "Way"
 data Transit = Transit Chain Way Positions deriving (Eq, Show)
+data Match = Match [Ball]
 
 data BallGenerator = SequentialGenerator Index Width deriving (Show, Eq)
 type Angle = Float
@@ -373,6 +374,53 @@ vectorMagnitude (Point x y) = sqrt $ x ** 2 + y ** 2
 transitContainingBall :: GameState -> Ball -> Maybe Transit
 transitContainingBall (GameState _ ts _ _) ball = find fun ts where
   fun (Transit (Chain balls) _ _) = elem ball balls
+
+-- Finds matches in any chains and removes the balls. Matches are
+-- where there are three or more balls in the same chain with the 
+-- same color in a row
+processMatches :: GameState -> (Maybe Match, GameState)
+processMatches gs = (match, newGs) where
+  (GameState gen transits free queue) = gs
+  matchesAndTransits = map processMatchesInTransit transits
+  match = case find Maybe.isJust $ map fst matchesAndTransits of
+            Just m -> m
+            Nothing -> Nothing
+  newTransits = map snd matchesAndTransits
+  newGs = GameState gen newTransits free queue
+
+processMatchesInTransit :: Transit -> (Maybe Match, Transit)
+processMatchesInTransit (Transit (Chain balls) w (PositionMap oldPositions)) = (maybeMatch, newTransit) where
+  (maybeMatch, newBalls) = removeMatches balls
+  -- TODO: we should remove the balls from the position map as well
+  maybeNewPositions = do
+    (Match balls) <- maybeMatch
+    return $ Map.filterWithKey (\k a -> not $ elem k balls) oldPositions
+  newPositions = case maybeNewPositions of 
+                   Just p -> p
+                   Nothing -> oldPositions
+  newTransit = Transit (Chain newBalls) w (PositionMap newPositions)
+
+matchCountFromHead :: [Ball] -> Int
+matchCountFromHead bs@((Ball _ _ col):as) = length $ ballsWithColor bs col
+
+-- Returns matches and the rest of the balls with the matches removed.
+removeMatches :: [Ball] -> (Maybe Match, [Ball])
+removeMatches balls@(b:bs) = if matchCountFromHead balls >= 3
+                               then (Just $ Match (take 3 balls), drop 3 balls)
+                               else case removeMatches bs of
+                                      (matches, rest) -> (matches, b:rest)
+removeMatches [] = (Nothing, [])
+
+-- return all of the balls matching the passed color, starting from
+-- the head of the list
+ballsWithColor :: [Ball] -> BallColor -> [Ball]
+ballsWithColor (a:as) col = if ballColor a == col
+                              then a : ballsWithColor as col
+                              else []
+ballsWithColor [] _ = []
+
+ballColor :: Ball -> BallColor
+ballColor (Ball _ _ color) = color
 
 processCollision :: GameState -> Collision -> GameState
 -- when a collision happens, the ball should either be inserted in front of,

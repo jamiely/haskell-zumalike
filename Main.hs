@@ -154,11 +154,12 @@ radiansToDegress :: Huma.Angle -> Huma.Angle
 radiansToDegress angle = 360/2/pi * angle
 
 stepGameState :: Float -> (GameState, UI) -> IO (GameState, UI)
-stepGameState f (game, p) = return (newGameAfterCollision, p) where
+stepGameState f (game, p) = return (newGameAfterMatches, p) where
   moveBalls = moveFirstBallForwardInGameStateAndUpdate game
   gameCollisions = collisionsByDistance $ gameStateCollisions game
   newGame = updateFreeBalls f moveBalls
   newGameAfterCollision = case gameCollisions of
                             (c:cs) -> processCollision newGame c
                             _      -> newGame
+  (maybeMatch, newGameAfterMatches) = processMatches newGameAfterCollision
 
