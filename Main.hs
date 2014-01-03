@@ -29,13 +29,18 @@ drawGameState :: (GameState, UI) -> IO Picture
 {-drawGameState (game, _) = return (grid <> plays)-}
 drawGameState (game, ui) = do
   putStrLn $ "@@Collisions: " ++ show gameCollisions ++ "\n@@Free:" ++ show free
-  return $ mconcat [origin, gamePicture, shooter, drawUI ui, collisions] where
+  return $ mconcat [origin, gamePicture, shooter, drawUI ui, collisions, colAngles] where
   (GameState _ transits freeBalls _) = game
   gamePicture = mconcat $ map drawTransit transits
   origin = color black $ circle 10
   shooter = mconcat $ map drawFreeBall freeBalls 
   gameCollisions = gameStateCollisions game
+  angles :: [Angle]
+  angles = map (collisionAngle game) gameCollisions
+  collisionsWithAngles :: [(Collision, Angle)]
+  collisionsWithAngles = zip gameCollisions angles
   collisions = mconcat $ map drawCollision gameCollisions
+  colAngles = mconcat $ map drawCollisionAngles collisionsWithAngles
   (GameState _ _ free _) = game
 
 drawUI :: UI -> Picture
@@ -59,14 +64,20 @@ convertPoint (Huma.Point x y) = (x, y)
 fromPoint :: Pic.Point -> Huma.Point
 fromPoint (x, y) = Huma.Point x y
 
+drawCollisionAngles :: (Collision, Angle) -> Picture
+drawCollisionAngles ((Collision (_, (Huma.Point x y), _, _) _), angle) = t where
+  t = Pic.Scale 0.5 0.5 moved
+  moved = Translate x y text 
+  text = Text $ show $ radiansToDegress angle
+
 drawCollision :: Collision -> Picture
-drawCollision (Collision (_, pt1) (Position _ (IndexedPoint _ pt2))) =  
-  color black $ Line $ map convertPoint [pt1, pt2]
+drawCollision (Collision (_, pt1, _, _) (Position _ (IndexedPoint _ pt2))) =  
+  color black $ Pic.Line $ map convertPoint [pt1, pt2]
 
 drawFreeBall :: FreeBall -> Picture
 drawFreeBall (ball, location, origin, _) = picBall <> path where
   picBall = drawBallAt ball location
-  path = color red $ Line $ map convertPoint [origin, location]
+  path = color red $ Pic.Line $ map convertPoint [origin, location]
 
 drawTransit :: Transit -> Picture
 drawTransit (Transit chain way (PositionMap positionMap)) = 

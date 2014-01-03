@@ -130,8 +130,9 @@ testCollisions = TestCase $ assertEqual "collisions" ex act where
   ballB = Ball 2 2.0 Red
   ballPtA = (ballA, Point 0 0)
   pos = Position ballB (IndexedPoint 0 (Point 3.5 0))
-  ex = [Collision ballPtA pos]
-  act = collisions ballPtA positions
+  freeball = (ballA, Point 0 0, Point 0 0, 0)
+  ex = [Collision freeball pos]
+  act = collisions freeball positions
   positions = PositionMap $ Map.fromList [(ballB, pos)]
 
 -- Some Tests

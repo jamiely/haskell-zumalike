@@ -8,6 +8,7 @@ import System.Random (StdGen)
 import Data.List (find, elemIndex)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import qualified Data.Maybe as Maybe
 
 type Width = Float
 type BallId = Int
@@ -51,7 +52,7 @@ data GameState = GameState BallGenerator [Transit]
   deriving (Show, Eq)
 type GameTick = (GameState, Tick)
 type BallPt = (Ball, Point)
-data Collision = Collision BallPt Position deriving (Eq, Show)
+data Collision = Collision FreeBall Position deriving (Eq, Show)
 
 -- list of game ticks, in order of descending time
 data Game = Game [GameTick]
@@ -256,15 +257,16 @@ gameStatePositions (GameState _ transits _ _) = map transitPositions transits
 gameStateCollisions :: GameState -> [Collision]
 gameStateCollisions gs@(GameState _ _ free _) = concat $ map calcCollisions free where
   calcCollisions :: FreeBall -> [Collision]
-  calcCollisions (ball, pt, _, _) = concat 
-    $ map (collisions (ball, pt)) 
+  calcCollisions freeball = concat $ map (collisions freeball) 
     $ gameStatePositions gs
 
 -- Returns all collisions for a point
-collisions :: BallPt -> Positions -> [Collision]
-collisions ballpt (PositionMap positions) = map (Collision ballpt) 
+collisions :: FreeBall -> Positions -> [Collision]
+collisions freeBall (PositionMap positions) = map (Collision freeBall) 
   $ filter ((ballPtsColliding ballpt) . ballPtFromPosition)
-  $ Map.elems positions
+  $ Map.elems positions where
+  (ball, pt, _, _) = freeBall
+  ballpt = (ball, pt)
 
 -- Setup some fake data to render
 
@@ -293,6 +295,64 @@ fakeGameState = game where
                        (b, g') -> (b:balls, g') 
   game = updateGameStatePositions c
 
+data Line = Line Point Point
+
+freeBallToLine :: FreeBall -> Line
+freeBallToLine (_, loc, orig, _) = Line orig loc
+
+ballPosAndNextToLine :: Position -> Maybe Position -> Maybe Line
+ballPosAndNextToLine (Position _ (IndexedPoint _ ptA)) 
+  (Just (Position _ (IndexedPoint _ ptB))) = Just $ Line ptA ptB
+ballPosAndNextToLine _ Nothing = Nothing
+
+vectorFromLine :: Line -> Point
+vectorFromLine (Line (Point x1 y1) (Point x2 y2)) = Point (x2-x1) (y2-y1)
+
+-- we want the angle between two lines (vectors)
+-- If we hit a ball and the angle is greater than 90 degrees, we
+-- want to insert the new ball BEHIND the ball we hit. Otherwise,
+-- it should be in front of the ball
+angleBetweenVectors v1 v2 = acos $ dot / mag where
+  dot = dotProduct $ Line v1 v2
+  mag = foldr1 (*) $ map vectorMagnitude [v1, v2]
+
+positionPt :: Position -> Point
+positionPt (Position _ (IndexedPoint _ p)) = p
+
+collisionAngle :: GameState -> Collision -> Angle 
+collisionAngle gs (Collision freeBall position) = angle where
+  angle = angleBetweenVectors v1 v2
+  v1 = vectorFromLine $ freeBallToLine freeBall
+  v2 = vectorFromLine $ Line nextPt pt
+  (Position _ ip@(IndexedPoint index pt)) = position
+  nextPt = case nextPointFromPosition gs position of
+             Just (IndexedPoint _ p) -> p
+             Nothing -> Point 0 0
+
+nextPointFromPosition :: GameState -> Position -> Maybe IndexedPoint
+nextPointFromPosition (GameState _ transits _ _) (Position ball ip) = do
+  transit <- find transitContainsBall transits
+  inc transit where
+    transitContainsBall (Transit _ _ positions) = 
+      positionsContainsBall positions ball
+
+    inc (Transit chain way positions) = incrementPointIndex way ip
+
+    positionsContainsBall (PositionMap m) = flip Map.member $ m
+
+ballPositionInGameState :: GameState -> Ball -> Maybe Position 
+ballPositionInGameState gs ball = do
+  m <- find (Map.member ball) $ map toMap $ gameStatePositions gs
+  pos <- Map.lookup ball m 
+  return pos where
+    toMap (PositionMap m) = m
+
+ballPositionInPositions :: Positions -> Ball -> Maybe Position
+ballPositionInPositions (PositionMap pos) = flip Map.lookup $ pos
+
+dotProduct :: Line -> Float
+dotProduct (Line (Point x1 y1) (Point x2 y2)) = x1 * x2 + y1 * y2
+vectorMagnitude (Point x y) = sqrt $ x ** 2 + y ** 2
 
 fakeGameState3 :: GameState
 fakeGameState3 = game where
