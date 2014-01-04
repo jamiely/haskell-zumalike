@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 executable haskell-zumalike
   main-is:             Main.hs
-  other-modules:       Huma
+  other-modules:       Huma, Huma.Types
   -- other-extensions:    
   build-depends:       base >=4.6 && <4.7, containers, syb, random, gloss
   -- hs-source-dirs:      

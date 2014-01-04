@@ -1,4 +1,29 @@
-module Huma where
+module Huma (
+  module Huma.Types,
+  fakeGameState,
+  fakeGameState3,
+  collisionsByDistance,
+  gameStateCollisions,
+  collisionAngle,
+  updateTransitPositions,
+  updatePositionsUsingPrev,
+  ballAndPreviousBall,
+  nonCollidingPosition,
+  nonCollidingPositionAlongPoints,
+  wayPointGivenIndex,
+  incrementPointIndex,
+  moveFirstBallForwardInTransit,
+  collisions,
+  updateGameStatePositions,
+  addNewBallToGameStateInTransit,
+  moveFirstBallForwardInGameStateAndUpdate,
+  newBall,
+  updateFreeBalls,
+  processCollision,
+  processMatches
+) where
+
+import Huma.Types
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -12,11 +37,6 @@ import Data.Ord (comparing)
 import qualified Data.Sequence as Seq
 import qualified Data.Maybe as Maybe
 
-type Width = Float
-type BallId = Int
-type Index = Int
-type Tick = Int
-data BallColor = Red | Green | Blue | Yellow | Cyan | Magenta deriving (Eq, Show, Ord)
 
 colors :: Seq BallColor
 colors = Seq.fromList [Red, Green, Blue, Yellow, Cyan, Magenta]
@@ -24,42 +44,10 @@ colors = Seq.fromList [Red, Green, Blue, Yellow, Cyan, Magenta]
 colorMod :: Int -> BallColor
 colorMod i = Seq.index colors $ i `rem` (Seq.length colors)
 
-data Point = Point Float Float deriving (Eq, Show)
 addPoints :: Point -> Point -> Point
 addPoints (Point x1 y1) (Point x2 y2) = Point (x1 + x2) (y1 + y2)
 pointFromPair :: (Float, Float) -> Point
 pointFromPair (x, y) = Point x y
-
-data IndexedPoint = IndexedPoint Index Point deriving (Eq, Show)
-
--- a regular ball in Zuma
-data Ball = Ball BallId Width BallColor deriving (Eq, Ord, Show)
--- a contiguous segment which a ball may traverse
-data Path = PointPath [IndexedPoint] deriving (Eq, Show)
--- A collection of paths that feed into each other
-data Way = Way [Path] deriving (Eq, Show)
-data Chain = Chain [Ball] deriving (Eq, Show)
-data Position = Position Ball IndexedPoint deriving (Eq, Show)
-data Positions = PositionMap (Map Ball Position) deriving (Eq, Show)
--- A Transit describes a chain on a certain "Way"
-data Transit = Transit Chain Way Positions deriving (Eq, Show)
-data Match = Match [Ball]
-
-data BallGenerator = SequentialGenerator Index Width deriving (Show, Eq)
-type Angle = Float
--- represents balls flying over the screen
-type FreeBall = (Ball, Point, Point, Angle)
-type BallQueue = Seq Ball
-data GameState = GameState BallGenerator [Transit] 
-  [FreeBall] BallQueue
-  deriving (Show, Eq)
-type GameTick = (GameState, Tick)
-type BallPt = (Ball, Point)
-type Distance = Float
-data Collision = Collision FreeBall Position Distance deriving (Eq, Show)
-
--- list of game ticks, in order of descending time
-data Game = Game [GameTick]
 
 ballPtFromPosition :: Position -> BallPt
 ballPtFromPosition (Position ball (IndexedPoint _ pt)) = (ball, pt)
