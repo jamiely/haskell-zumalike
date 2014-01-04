@@ -1,6 +1,7 @@
 module Main where
 
 import Huma
+import Huma.Example
 import Control.Applicative
 import Data.Monoid ((<>), mconcat, mempty)
 import Graphics.Gloss.Interface.IO.Game

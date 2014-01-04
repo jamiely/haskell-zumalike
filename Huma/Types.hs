@@ -9,6 +9,7 @@ type Index = Int
 type Tick = Int
 data BallColor = Red | Green | Blue | Yellow | Cyan | Magenta deriving (Eq, Show, Ord)
 data Point = Point Float Float deriving (Eq, Show)
+data Line = Line Point Point
 data IndexedPoint = IndexedPoint Index Point deriving (Eq, Show)
 
 -- a regular ball in Zuma

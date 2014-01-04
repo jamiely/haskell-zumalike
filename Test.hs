@@ -11,6 +11,7 @@ import qualified Data.Map as Map
 import qualified Data.Sequence as Seq
 import Test.QuickCheck
 import Huma
+import Huma.Example
 
 ball1 = Ball 1 2.0 Red
 ball2 = Ball 2 2.0 Red
