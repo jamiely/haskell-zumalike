@@ -99,13 +99,17 @@ testFakeGameState = TestCase $ assertEqual "fakeGameState" ex act where
 
 testMoveBallUp :: HUnit.Test
 testMoveBallUp = TestList [
-    TestCase $ assertEqual "wayPointGivenIndex" 
+    TestLabel "way point given index" $ 
+      TestCase $ assertEqual "wayPointGivenIndex" 
       (Just ip2) (wayPointGivenIndex way 1),
-    TestCase $ assertEqual "incrementPointIndex" 
+    TestLabel "increment point index 1" $ 
+      TestCase $ assertEqual "incrementPointIndex" 
       (Just ip2) (incrementPointIndex way ip1),
-    TestCase $ assertEqual "incrementPointIndex" 
+    TestLabel "increment point index 2" $ 
+      TestCase $ assertEqual "incrementPointIndex" 
       (Just ip4) (incrementPointIndex way ip3),
-    TestCase $ assertEqual "moveFirstBallForwardInTransit" ex1 act1
+    TestLabel "move first ball forward in transit" $ 
+      TestCase $ assertEqual "moveFirstBallForwardInTransit" ex1 act1
   ] where
   chain = Chain [ball1, ball2, ball3]
   ip1 = IndexedPoint 0 $ origin
@@ -138,14 +142,14 @@ testCollisions = TestCase $ assertEqual "collisions" ex act where
 
 -- Some Tests
 tests = TestList [ 
-    testBallAndPreviousBall,
-    testNonCollidingPosition,
-    testNonCollidingPositionAlongPoints,
-    testUpdatePositionsUsingPrev,
-    testUpdatePositionsUsingPrev2,
-    testUpdateTransitPositions,
-    testFakeGameState,
-    testMoveBallUp
+    TestLabel "ball and previous ball" testBallAndPreviousBall,
+    TestLabel "non-colliding positions" testNonCollidingPosition,
+    TestLabel "non-colliding position along points" testNonCollidingPositionAlongPoints,
+    TestLabel "update positions using prev" testUpdatePositionsUsingPrev,
+    TestLabel "update positions using prev 2" testUpdatePositionsUsingPrev2,
+    TestLabel "update transit positions" testUpdateTransitPositions,
+    TestLabel "fake game state" testFakeGameState,
+    TestLabel "move ball up" testMoveBallUp
   ] where
 
 main :: IO ()
