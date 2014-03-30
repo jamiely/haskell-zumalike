@@ -1,0 +1,36 @@
+#/usr/bin/env bash
+
+build() {
+  cabal build
+}
+
+test() {
+  build && \
+  ./dist/build/test-haskell-zumalike/test-haskell-zumalike
+}
+
+run() {
+  build && \
+    ./dist/build/haskell-zumalike/haskell-zumalike
+}
+
+usage() {
+  echo "Usage: $0 <build|test|run>"
+  return 1
+}
+
+case $1 in 
+  build)
+    build
+    ;;
+  test)
+    test
+    ;;
+  run)
+    run
+    ;;
+  *)
+    usage
+    ;;
+esac
+
