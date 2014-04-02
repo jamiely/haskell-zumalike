@@ -13,6 +13,12 @@ import qualified Data.Map as Map
 data Shooter = Shooter Pic.Point Huma.Angle
 data UI = UI Shooter
 
+width = 1200
+height = 800
+
+centerX = 600
+centerY = 400
+
 main :: IO ()
 main = do
   playIO
@@ -23,13 +29,13 @@ main = do
     drawGameState
     handleInput
     stepGameState where
-      size = (1200, 800)
+      size = (width, height)
       position = (0, 0)
 
 drawGameState :: (GameState, UI) -> IO Picture
 {-drawGameState (game, _) = return (grid <> plays)-}
 drawGameState (game, ui) = do
-  putStrLn $ "@@Collisions: " ++ show gameCollisions ++ "\n@@Free:" ++ show free
+  -- putStrLn $ "@@Collisions: " ++ show gameCollisions ++ "\n@@Free:" ++ show free
   return $ mconcat [origin, gamePicture, shooter, drawUI ui, collisions, colAngles] where
   (GameState _ transits freeBalls _) = game
   gamePicture = mconcat $ map drawTransit transits
@@ -133,7 +139,18 @@ handleInput (EventKey (Char 'x') Up _ _) (game, ui) = do
   return (newGame, ui) where
     newGame = launchBall game ui
 
+handleInput (EventMotion pos@(fX, fY)) (game, ui) = do
+  return (game, rotateShooterTo angle ui) where
+    angle = calculateShooterAngle pos
+
 handleInput _ a = return a
+
+adjOriginPoints :: (Float, Float) -> (Float, Float)
+adjOriginPoints (x, y) = (x, y)
+
+calculateShooterAngle :: (Float, Float) -> Huma.Angle
+calculateShooterAngle pts = atan2 opposite adjacent where
+  (adjacent, opposite) = adjOriginPoints pts
 
 launchBall :: GameState -> UI -> GameState 
 launchBall gs ui = newGameState where
@@ -147,6 +164,10 @@ launchBall gs ui = newGameState where
 rotateShooterBy :: Huma.Angle -> UI -> UI
 rotateShooterBy incAngle (UI (Shooter origin oldAngle)) = 
   UI $ Shooter origin (oldAngle + incAngle)
+
+rotateShooterTo :: Huma.Angle -> UI -> UI
+rotateShooterTo newAngle (UI (Shooter origin oldAngle)) = 
+  UI $ Shooter origin newAngle
 
 defaultIncAngle :: Huma.Angle 
 defaultIncAngle = 2 * pi / 60
