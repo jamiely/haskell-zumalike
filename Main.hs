@@ -108,10 +108,10 @@ ballToGlossColor Magenta = magenta
 ballToGlossColor Cyan = cyan
 
 handleInput :: Event -> (GameState, UI) -> IO (GameState, UI)
-handleInput (EventKey (MouseButton LeftButton) Up _ (x, y))
-  (game, p) = do
-    let newGameState = game -- TODO: add ball to game in first transit
-    return (newGameState, p)
+{-handleInput (EventKey (MouseButton LeftButton) Up _ (x, y))-}
+  {-(game, p) = do-}
+    {-let newGameState = game -- TODO: add ball to game in first transit-}
+    {-return (newGameState, p)-}
 
 handleInput (EventKey (Char 'a') Up _ _) (game, p) = do
   putStrLn "Add a ball"
@@ -120,6 +120,7 @@ handleInput (EventKey (Char 'a') Up _ _) (game, p) = do
   newGameState2 = updateGameStatePositions newGameState1
   addBallToGameStateInFirstTransit g@(GameState _ (t:ts) _ _) = addNewBallToGameStateInTransit g t
   addBallToGameStateInFirstTransit g = (g, Nothing)
+
 handleInput (EventKey (Char '?') Up _ _) (game@(GameState _ _ free _), p) = do
   putStrLn $ show free
   return (game, p)
@@ -135,6 +136,11 @@ handleInput (EventKey (Char 'r') Up _ _) (game, oldUI) = return (game, newUI) wh
   newUI = rotateShooterBy (-defaultIncAngle) oldUI
 
 handleInput (EventKey (Char 'x') Up _ _) (game, ui) = do
+  putStrLn "Launch ball!"
+  return (newGame, ui) where
+    newGame = launchBall game ui
+
+handleInput (EventKey (MouseButton LeftButton) Up _ _) (game, ui) = do
   putStrLn "Launch ball!"
   return (newGame, ui) where
     newGame = launchBall game ui
