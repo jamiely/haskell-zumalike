@@ -9,6 +9,8 @@ import qualified Graphics.Gloss.Interface.IO.Game as GlossGame
 import qualified Graphics.Gloss.Data.Picture as Pic
 import Control.Monad
 import qualified Data.Map as Map
+import qualified Data.Sequence as Seq
+import Data.Sequence ((<|))
 
 data Shooter = Shooter Pic.Point Huma.Angle
 data UI = UI Shooter
@@ -33,11 +35,10 @@ main = do
       position = (0, 0)
 
 drawGameState :: (GameState, UI) -> IO Picture
-{-drawGameState (game, _) = return (grid <> plays)-}
 drawGameState (game, ui) = do
-  -- putStrLn $ "@@Collisions: " ++ show gameCollisions ++ "\n@@Free:" ++ show free
-  return $ mconcat [origin, gamePicture, shooter, drawUI ui, collisions, colAngles] where
-  (GameState _ transits freeBalls _) = game
+  return $ mconcat [origin, gamePicture, shooter, drawUI ui, collisions, colAngles, ballQueuePic] where
+  (GameState _ transits freeBalls ballQueue) = game
+  ballQueuePic = drawBallQueue ballQueue
   gamePicture = mconcat $ map drawTransit transits
   origin = color black $ circle 10
   shooter = mconcat $ map drawFreeBall freeBalls 
@@ -52,8 +53,16 @@ drawGameState (game, ui) = do
   colAngles = mconcat $ map drawCollisionAngles collisionsWithAngles
   (GameState _ _ free _) = game
 
+drawBallQueue :: BallQueue -> Picture
+drawBallQueue que = if Seq.null que 
+                      then Pic.Blank
+                      else scale 0.5 0.5 $ ballPic where
+  firstBall = Seq.index que $ (Seq.length que) - 1
+  ballPic = drawBallAt firstBall (Point 0 0)
+
 drawUI :: UI -> Picture
-drawUI (UI (Shooter origin angle)) = rotate (-(radiansToDegress angle)) $ drawPointer origin
+drawUI (UI (Shooter origin angle)) = 
+  rotate (-(radiansToDegress angle)) $ drawPointer origin
 
 drawPointer :: Pic.Point -> Picture
 drawPointer (x, y) = rotate (0) $ Polygon [a, b, c] where 
@@ -163,9 +172,12 @@ launchBall gs ui = newGameState where
   (ball, gsAfterBall) = newBall gs
   (UI (Shooter shootOrigin shootAngle)) = ui
   (GameState gen transits free queue) = gsAfterBall
-  newGameState = GameState gen transits newFree queue
+  newGameState = GameState gen transits newFree newQueue
+  ballQueueLength = Seq.length queue
+  newQueue = ball <| (Seq.take (ballQueueLength - 1) queue)
+  shootBall = Seq.index queue $ ballQueueLength - 1
   shootPt = fromPoint shootOrigin
-  newFree = (ball, shootPt, shootPt, shootAngle):free
+  newFree = (shootBall, shootPt, shootPt, shootAngle):free
 
 rotateShooterBy :: Huma.Angle -> UI -> UI
 rotateShooterBy incAngle (UI (Shooter origin oldAngle)) = 
